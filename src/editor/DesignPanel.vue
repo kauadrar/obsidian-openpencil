@@ -15,6 +15,7 @@ import { useEditorPropertyList } from '@open-pencil/vue/controls/property-list'
 import { useFillControls } from '@open-pencil/vue/controls/fill'
 import { useStrokeControls } from '@open-pencil/vue/controls/stroke'
 import { ColorField, NumField } from './fields'
+import AutoLayoutSection from './AutoLayoutSection.vue'
 import { EYE_ICON, EYE_OFF_ICON, LAYER_ICONS } from './icons'
 
 const editor = useEditor()
@@ -173,6 +174,8 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
           </div>
         </section>
       </PositionControlsRoot>
+
+      <AutoLayoutSection />
 
       <section class="op-prop">
         <div class="op-prop-head">Appearance</div>
