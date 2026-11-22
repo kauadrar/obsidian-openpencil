@@ -25,6 +25,9 @@ updates:
       interval: weekly
     ignore:
       - dependency-name: "@open-pencil/*"
+      # vue-tsc requires typescript <7; lift this once vue-tsc supports TypeScript 7.
+      - dependency-name: typescript
+        versions: [">=7"]
     groups:
       tooling:
         patterns: ["*"]
