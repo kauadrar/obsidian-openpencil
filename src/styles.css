@@ -1,0 +1,122 @@
+/* OpenPencil view. Uses Obsidian's theme variables so it follows light/dark themes. */
+.workspace-leaf-content[data-type='openpencil-design'] .view-content {
+  padding: 0;
+  overflow: hidden;
+}
+
+.openpencil-host {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.openpencil-loading,
+.openpencil-error {
+  padding: var(--size-4-4);
+  color: var(--text-muted);
+}
+.openpencil-error {
+  color: var(--text-error);
+}
+
+.op-shell {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  width: 100%;
+  height: 100%;
+}
+
+.op-pages {
+  overflow-y: auto;
+  border-right: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  padding: var(--size-4-2);
+}
+.op-pages-title {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: var(--size-4-1) var(--size-4-1) var(--size-4-2);
+}
+.op-page {
+  display: block;
+  width: 100%;
+  text-align: left;
+  box-shadow: none;
+  background: transparent;
+  margin-bottom: 2px;
+  font-size: var(--font-ui-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.op-page.is-active {
+  background: var(--background-modifier-active-hover);
+  color: var(--text-normal);
+}
+
+.op-canvas {
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+.op-surface {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.op-toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: var(--size-4-3);
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: var(--shadow-s);
+  max-width: calc(100% - 24px);
+  overflow-x: auto;
+}
+.op-tool {
+  font-size: var(--font-ui-smaller);
+  padding: 4px 8px;
+  box-shadow: none;
+  white-space: nowrap;
+}
+.op-tool.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.op-banner {
+  position: absolute;
+  top: var(--size-4-2);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: var(--radius-s);
+  background: var(--background-modifier-message);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+}
+
+.op-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: var(--background-primary);
+  pointer-events: none;
+}
+.op-overlay.is-error {
+  color: var(--text-error);
+  padding: var(--size-4-4);
+  text-align: center;
+}
