@@ -17,6 +17,7 @@ import { useStrokeControls } from '@open-pencil/vue/controls/stroke'
 import { ColorField, NumField } from './fields'
 import AutoLayoutSection from './AutoLayoutSection.vue'
 import EffectsSection from './EffectsSection.vue'
+import ExportSection from './ExportSection.vue'
 import { EYE_ICON, EYE_OFF_ICON, LAYER_ICONS } from './icons'
 
 const editor = useEditor()
@@ -137,6 +138,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
         <div class="op-prop-head">Document</div>
         <div class="op-prop-note">{{ editor.graph.getPages().length }} page(s) · {{ page?.childIds.length ?? 0 }} top-level layer(s) on this page</div>
       </section>
+      <ExportSection />
     </template>
 
     <!-- A selection -->
@@ -307,6 +309,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
       </section>
 
       <EffectsSection />
+      <ExportSection />
     </template>
   </aside>
 </template>

@@ -137,6 +137,7 @@ class DesignView extends FileView {
         readAsset: (rel) => this.readSibling(file, rel),
         onChange: () => this.markDirty(),
         onSaveRequest: () => void this.save(),
+        writeExport: (name, bytes) => this.writeExport(file, name, bytes),
       })
       this.mounted.setActive(this.app.workspace.getActiveViewOfType(DesignView) === this)
     } catch (e) {
@@ -193,6 +194,21 @@ class DesignView extends FileView {
       }
     })()
     return this.saving
+  }
+
+  /** Writes an exported image next to the design, numbering the name when it is taken. */
+  async writeExport(file: TFile, name: string, bytes: Uint8Array): Promise<string> {
+    const base = file.parent?.path ?? ''
+    const dot = name.lastIndexOf('.')
+    const stem = dot > 0 ? name.slice(0, dot) : name
+    const ext = dot > 0 ? name.slice(dot) : ''
+    let path = normalizePath(`${base}/${name}`)
+    for (let i = 1; this.app.vault.getAbstractFileByPath(path); i++) {
+      path = normalizePath(`${base}/${stem} ${i}${ext}`)
+    }
+    const created = await this.app.vault.createBinary(path, toArrayBuffer(bytes))
+    new Notice(`Exported ${created.name}`)
+    return created.path
   }
 
   async saveAsFig() {
