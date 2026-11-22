@@ -1,0 +1,41 @@
+{
+  "name": "obsidian-openpencil",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build && node scripts/notices.mjs && node scripts/pack-editor.mjs && node scripts/build-main.mjs && node scripts/copy-assets.mjs",
+    "typecheck": "vue-tsc --noEmit",
+    "install-to-vault": "node scripts/install-to-vault.mjs",
+    "prepare": "husky",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@open-pencil/canvaskit": "0.17.0",
+    "@open-pencil/core": "0.17.0",
+    "@open-pencil/fig": "0.17.0",
+    "@open-pencil/pen": "0.17.0",
+    "@open-pencil/scene-graph": "0.17.0",
+    "@open-pencil/vue": "0.17.0",
+    "vue": "^3.5.46"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@vitejs/plugin-vue": "^6.0.11",
+    "ai": "^7.0.179",
+    "esbuild": "^0.28.2",
+    "husky": "^9.1.7",
+    "obsidian": "^1.14.4",
+    "playwright": "^1.65.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.1.4",
+    "vue-tsc": "^3.3.14"
+  },
+  "description": "Unofficial OpenPencil design editor for Obsidian",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kauadrar/obsidian-openpencil.git"
+  }
+}
