@@ -5,7 +5,8 @@
 // files under dist/editor/assets, resolved against this module's URL.
 import '@open-pencil/core/runtime-assets/install'
 
-import { createApp, defineComponent, h, reactive, ref, type App as VueApp } from 'vue'
+import { createApp, defineComponent, h, provide, reactive, ref, type App as VueApp } from 'vue'
+import { WRITE_EXPORT, type WriteExport } from './context'
 import { createDefaultEditorState, createDocumentGraph, createEditor, type Editor } from '@open-pencil/core'
 import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
 import { setPageBackgrounds } from '@open-pencil/core/figma-api'
@@ -43,6 +44,9 @@ export interface MountOptions {
   onChange: () => void
   /** Called when the person presses Mod+S inside the editor. */
   onSaveRequest: () => void
+  /** Writes a file from the Design panel's Export section; resolves to where it went. Without
+   *  it, the browser downloads the file. */
+  writeExport?: WriteExport
 }
 
 export interface MountedEditor {
@@ -155,6 +159,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
   const Root = defineComponent({
     setup() {
       provideEditor(editor)
+      if (opts.writeExport) provide(WRITE_EXPORT, opts.writeExport)
       return () =>
         h(Shell, {
           editor,

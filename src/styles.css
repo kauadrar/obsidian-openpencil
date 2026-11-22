@@ -668,3 +668,39 @@
 .op-shell .op-effect-detail .op-color {
   flex: none;
 }
+
+/* Export */
+.op-shell .op-export-scale {
+  flex: none;
+  width: 64px;
+}
+.op-shell .op-export-format {
+  flex: 1;
+}
+.op-shell .op-field.is-disabled {
+  opacity: 0.5;
+}
+.op-shell button.op-export-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  border-radius: 5px;
+  border: 1px solid var(--op-border);
+  font-size: 11px;
+  color: var(--op-text);
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.op-shell button.op-export-btn:hover {
+  background: var(--op-hover);
+}
+.op-shell button.op-export-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.op-shell .op-prop-note.is-warning {
+  color: var(--text-error, #f24822);
+}
