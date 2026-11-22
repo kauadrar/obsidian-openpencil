@@ -132,7 +132,9 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
 
   const editor = createEditor({
     graph,
-    state: reactive(createDefaultEditorState(page.id)),
+    // showRulers is not in the SDK's default state, but its guide input reads it: without it the
+    // rulers are drawn and dragging a guide out of them does nothing.
+    state: reactive({ ...createDefaultEditorState(page.id), showRulers: true }),
     // The canvas sits between the sidebar and the Design panel, so measure it, not the host.
     getViewportSize: () => {
       const canvas = el.querySelector<HTMLElement>('.op-canvas') ?? el

@@ -54,6 +54,8 @@ try {
     check('re-opened .fig keeps every layer', fig.after === fig.before, `${fig.before} → ${fig.after} nodes`)
     check('re-opened .fig contains the drawn shapes',
       fig.names.includes('Smoke rect') && fig.names.includes('Smoke ellipse'))
+    // The SDK only lets you drag guides out of the rulers when this flag is set.
+    check('rulers accept guides', await page.evaluate(() => window.smokeEditor.state.showRulers === true))
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
