@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>OpenPencil Editor smoke test</title>
+  <link rel="stylesheet" href="../src/styles.css" />
+  <style>
+    /* Stand-ins for Obsidian's theme variables */
+    body { margin: 0; font-family: system-ui; --background-primary:#fff; --background-secondary:#f6f6f6;
+      --background-modifier-border:#ddd; --text-muted:#777; --text-error:#c00; --interactive-accent:#7c3aed;
+      --text-on-accent:#fff; --radius-m:8px; --radius-s:4px; --size-4-1:4px; --size-4-2:8px; --size-4-3:12px; --size-4-4:16px;
+      --font-ui-smaller:12px; --font-ui-small:13px; --background-modifier-message:#333; --background-modifier-active-hover:#e8e2fb; }
+    #host { height: 100vh }
+  </style>
+</head>
+<body>
+  <div id="host" class="openpencil-host"></div>
+  <script type="module">
+    // Loads the built editor bundle by URL, as main.js does inside Obsidian, and exposes a few
+    // helpers that scripts/smoke.mjs drives. Open it by hand with any static server to try the editor.
+    const mod = await import(new URL('../build/editor/editor.js', location.href).href)
+    const host = document.getElementById('host')
+    let mounted = null
+    let changes = 0
+
+    function countNodes(graph) {
+      let n = 0
+      const walk = (id) => { const node = graph.getNode(id); if (!node) return; n++; (node.childIds ?? []).forEach(walk) }
+      graph.getPages().forEach((p) => walk(p.id))
+      return n
+    }
+    async function open(data, fileName) {
+      mounted?.destroy()
+      host.innerHTML = ''
+      changes = 0
+      mounted = await mod.mountEditor(host, {
+        data, fileName, extension: fileName.endsWith('.pen') ? 'pen' : 'fig',
+        onChange: () => changes++, onSaveRequest() {},
+      })
+      // Wait for CanvasRoot's ready (the overlay goes away) or failure.
+      for (let i = 0; i < 200; i++) {
+        const overlay = host.querySelector('.op-overlay')
+        if (!overlay) return { ok: true }
+        if (overlay.classList.contains('is-error')) return { ok: false, error: overlay.textContent }
+        await new Promise((r) => setTimeout(r, 50))
+      }
+      return { ok: false, error: 'canvas did not become ready in 10s' }
+    }
+
+    window.smoke = {
+      async blankRoundTrip() {
+        const ready = await open(await mod.createBlankFig('Smoke'), 'Smoke.fig')
+        if (!ready.ok) return ready
+        const editor = mounted.editor
+        const page = editor.graph.getPages()[0]
+        editor.createShape('RECTANGLE', 40, 40, 130, 105, page.id, 'Smoke rect')
+        editor.createShape('ELLIPSE', 200, 40, 80, 80, page.id, 'Smoke ellipse')
+        const before = countNodes(editor.graph)
+        const bytes = await mounted.exportFig('Smoke')
+        const reopened = await open(bytes, 'Smoke.fig')
+        if (!reopened.ok) return reopened
+        const names = []
+        const walk = (id) => { const nd = mounted.editor.graph.getNode(id); if (!nd) return; names.push(nd.name); (nd.childIds ?? []).forEach(walk) }
+        mounted.editor.graph.getPages().forEach((p) => walk(p.id))
+        return { ok: true, bytes: bytes.byteLength, before, after: countNodes(mounted.editor.graph), names }
+      },
+      async openPen(url) {
+        const data = new Uint8Array(await (await fetch(url)).arrayBuffer())
+        const ready = await open(data, url.split('/').pop())
+        return { ...ready, pages: mounted.editor.graph.getPages().map((p) => p.name), nodes: countNodes(mounted.editor.graph) }
+      },
+    }
+    window.smokeReady = true
+  </script>
+</body>
+</html>
