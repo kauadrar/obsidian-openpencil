@@ -35,7 +35,7 @@
   --op-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.06);
 
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 240px minmax(0, 1fr) 248px;
   width: 100%;
   height: 100%;
   font-family: Inter, var(--font-interface);
@@ -55,7 +55,7 @@
   --op-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.08);
 }
 .op-shell.is-collapsed {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr) 248px;
 }
 
 /* Obsidian styles every <button>; the shell's buttons start from nothing. */
@@ -365,4 +365,209 @@
   color: var(--text-error);
   padding: 16px;
   text-align: center;
+}
+
+/* Design panel */
+.op-shell .op-design {
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--op-border);
+  background: var(--op-bg);
+}
+.op-shell .op-design-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--op-border);
+}
+.op-shell .op-design-tab {
+  font-weight: 600;
+  padding: 13px 0 11px;
+  border-bottom: 2px solid transparent;
+}
+.op-shell .op-design-tab.is-active {
+  border-bottom-color: var(--op-accent);
+}
+.op-shell .op-design-zoom {
+  color: var(--op-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.op-shell .op-prop {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--op-border);
+}
+.op-shell .op-prop-title {
+  flex-direction: row;
+  align-items: center;
+  font-weight: 600;
+}
+.op-shell .op-prop-title .op-icon {
+  color: var(--op-text-muted);
+}
+.op-shell .op-prop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+  font-weight: 600;
+}
+.op-shell .op-prop-note {
+  color: var(--op-text-muted);
+  line-height: 1.4;
+}
+.op-shell .op-prop-note.is-warning {
+  color: #f5a623;
+}
+.op-shell .op-link {
+  align-self: flex-start;
+  color: var(--op-accent);
+}
+.op-shell .op-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.op-shell .op-align-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.op-shell .op-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: var(--op-border);
+}
+
+/* Fields share one look: a rounded grey box, with a dim label in front. */
+.op-shell .op-field,
+.op-shell .op-color {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 5px;
+  background: var(--op-hover);
+  border: 1px solid transparent;
+}
+.op-shell .op-field:focus-within,
+.op-shell .op-color:focus-within {
+  border-color: var(--op-accent);
+}
+.op-shell .op-field.is-disabled {
+  opacity: 0.5;
+}
+.op-shell .op-field-label {
+  flex: none;
+  min-width: 10px;
+  color: var(--op-text-faint);
+  text-align: center;
+}
+.op-shell .op-field input,
+.op-shell .op-field select,
+.op-shell .op-color input:not([type='color']) {
+  all: unset;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  font: inherit;
+  color: var(--op-text);
+  font-variant-numeric: tabular-nums;
+}
+.op-shell .op-field select {
+  cursor: default;
+}
+.op-shell .op-field select option {
+  background: var(--op-bg-raised);
+  color: var(--op-text);
+}
+.op-shell .op-color {
+  flex: 1;
+  padding: 0 0 0 4px;
+}
+.op-shell .op-swatch {
+  position: relative;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  overflow: hidden;
+  background:
+    linear-gradient(var(--swatch), var(--swatch)) left / 50% 100% no-repeat,
+    repeating-conic-gradient(#ccc 0 25%, #fff 0 50%) 0 0 / 8px 8px;
+  box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.35);
+}
+.op-shell .op-swatch::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 50%;
+  background: var(--swatch);
+  opacity: var(--swatch-a);
+}
+.op-shell .op-swatch input[type='color'] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.op-shell .op-hex {
+  text-transform: uppercase;
+}
+.op-shell .op-color .op-color-opacity {
+  flex: none;
+  width: 56px;
+  height: 100%;
+  border-radius: 0 5px 5px 0;
+  border: none;
+  border-left: 1px solid var(--op-bg);
+  background: none;
+}
+.op-shell .op-paint {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.op-shell .op-paint.is-hidden .op-color {
+  opacity: 0.5;
+}
+.op-shell .op-paint-label {
+  flex: 1;
+  height: 28px;
+  line-height: 28px;
+  padding: 0 8px;
+  border-radius: 5px;
+  background: var(--op-hover);
+  text-transform: capitalize;
+}
+.op-shell .op-segmented {
+  display: flex;
+  padding: 2px;
+  border-radius: 5px;
+  background: var(--op-hover);
+}
+.op-shell .op-segmented button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--op-text-muted);
+}
+.op-shell .op-segmented button.is-active {
+  background: var(--op-bg-raised);
+  color: var(--op-text);
+  box-shadow: 0 0 0 1px var(--op-border);
 }
