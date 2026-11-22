@@ -9,6 +9,7 @@ import { ToolbarRoot } from '@open-pencil/vue/primitives/Toolbar'
 import { PageListRoot } from '@open-pencil/vue/primitives/PageList'
 import { LayerTreeRoot, LayerTreeItem } from '@open-pencil/vue/primitives/LayerTree'
 import { useEditorKeyboard } from '@open-pencil/vue/editor/keyboard'
+import DesignPanel from './DesignPanel.vue'
 import {
   CHEVRON_DOWN_ICON,
   CHEVRON_ICON,
@@ -267,5 +268,7 @@ function finishRename(rename: (name: string) => void, e: Event) {
         The canvas could not start: {{ error }}
       </div>
     </main>
+
+    <DesignPanel />
   </div>
 </template>

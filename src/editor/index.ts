@@ -115,7 +115,11 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
   const editor = createEditor({
     graph,
     state: reactive(createDefaultEditorState(page.id)),
-    getViewportSize: () => ({ width: el.clientWidth || 800, height: el.clientHeight || 600 }),
+    // The canvas sits between the sidebar and the Design panel, so measure it, not the host.
+    getViewportSize: () => {
+      const canvas = el.querySelector<HTMLElement>('.op-canvas') ?? el
+      return { width: canvas.clientWidth || 800, height: canvas.clientHeight || 600 }
+    },
   })
 
   const applyTheme = (t: Theme) => {
