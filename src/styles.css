@@ -579,3 +579,72 @@
   color: var(--op-text);
   box-shadow: 0 0 0 1px var(--op-border);
 }
+
+/* Auto layout */
+.op-shell .op-layout-dir {
+  flex: 1;
+}
+.op-shell .op-layout-main {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 8px;
+}
+.op-shell .op-align-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  height: 72px;
+  padding: 4px;
+  border-radius: 5px;
+  background: var(--op-hover);
+}
+.op-shell .op-align-grid button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+}
+.op-shell .op-align-grid button span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--op-text-faint);
+}
+.op-shell .op-align-grid button:hover span {
+  background: var(--op-text);
+}
+.op-shell .op-align-grid button.is-active span {
+  width: 10px;
+  height: 3px;
+  border-radius: 1px;
+  background: var(--op-accent);
+  box-shadow: 0 4px 0 var(--op-accent), 0 -4px 0 var(--op-accent);
+}
+.op-shell .op-align-grid.is-vertical button.is-active span {
+  width: 3px;
+  height: 10px;
+  box-shadow: 4px 0 0 var(--op-accent), -4px 0 0 var(--op-accent);
+}
+.op-shell .op-layout-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.op-shell .op-layout-fields .op-field {
+  height: 22px;
+}
+.op-shell .op-gap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.op-shell .op-gap .op-field {
+  flex: 1;
+}
+.op-shell .op-field.is-static {
+  color: var(--op-text-muted);
+}
+.op-shell .op-icon-btn.is-on {
+  color: var(--op-accent);
+}
