@@ -487,6 +487,7 @@
 }
 .op-shell .op-field select {
   cursor: default;
+  line-height: 26px; /* all: unset leaves a select's text at the top of the field */
 }
 .op-shell .op-field select option {
   background: var(--op-bg-raised);
@@ -647,4 +648,23 @@
 }
 .op-shell .op-icon-btn.is-on {
   color: var(--op-accent);
+}
+
+/* Effects */
+.op-shell .op-effect {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.op-shell .op-effect-type {
+  flex: 1;
+}
+.op-shell .op-effect-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 26px;
+}
+.op-shell .op-effect-detail .op-color {
+  flex: none;
 }

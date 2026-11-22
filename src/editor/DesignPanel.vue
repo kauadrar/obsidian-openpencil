@@ -16,6 +16,7 @@ import { useFillControls } from '@open-pencil/vue/controls/fill'
 import { useStrokeControls } from '@open-pencil/vue/controls/stroke'
 import { ColorField, NumField } from './fields'
 import AutoLayoutSection from './AutoLayoutSection.vue'
+import EffectsSection from './EffectsSection.vue'
 import { EYE_ICON, EYE_OFF_ICON, LAYER_ICONS } from './icons'
 
 const editor = useEditor()
@@ -304,6 +305,8 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
           </div>
         </template>
       </section>
+
+      <EffectsSection />
     </template>
   </aside>
 </template>
