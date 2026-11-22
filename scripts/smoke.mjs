@@ -24,6 +24,15 @@ const base = `http://127.0.0.1:${server.address().port}`
 
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1000, height: 700 } })
+// Obsidian serves the plugin's files from another origin than the page, so a Worker built from
+// the bundle's own URL cannot start there. Refuse Workers the same way, so code that needs one fails here too.
+await page.addInitScript(() => {
+  window.Worker = class {
+    constructor() {
+      throw new DOMException("Failed to construct 'Worker': cross-origin script (smoke test, as in Obsidian)", 'SecurityError')
+    }
+  }
+})
 const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()))

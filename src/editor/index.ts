@@ -9,13 +9,27 @@ import { createApp, defineComponent, h, reactive, ref, type App as VueApp } from
 import { createDefaultEditorState, createDocumentGraph, createEditor, type Editor } from '@open-pencil/core'
 import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
 import { setPageBackgrounds } from '@open-pencil/core/figma-api'
-import { exportFigFile, parseFigFile } from '@open-pencil/core/io/formats/fig'
+import { exportFigFile, parseFigFile, setFigCanvasCompressor } from '@open-pencil/core/io/formats/fig'
+import { buildFigKiwi, loadFigDataCompressor } from '@open-pencil/kiwi/fig/container'
 import { penFormat } from '@open-pencil/core/io'
 import { getCanvasKit } from '@open-pencil/core/canvaskit'
 import { SceneGraph } from '@open-pencil/scene-graph'
 import { provideEditor } from '@open-pencil/vue'
 
 import Shell from './Shell.vue'
+
+// OpenPencil compresses a .fig save in a Web Worker loaded from this bundle's folder. Inside
+// Obsidian that folder is served from another origin than the page, so the Worker cannot start
+// and every save fails. Compress on the main thread instead, as OpenPencil does without workers.
+setFigCanvasCompressor(async (parts) =>
+  buildFigKiwi(
+    parts.schemaDeflated,
+    parts.kiwiData,
+    parts.figKiwiVersion,
+    await loadFigDataCompressor(parts.compressionLevel),
+    parts.kind,
+  ),
+)
 
 export type DesignExtension = 'fig' | 'pen'
 
