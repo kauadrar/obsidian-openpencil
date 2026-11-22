@@ -1,0 +1,41 @@
+version: 2
+updates:
+  # OpenPencil SDK: checked daily, all @open-pencil/* packages in one pull request (they must
+  # stay on the same version). "fix(deps)" makes release-please ship a patch release once merged.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    allow:
+      - dependency-name: "@open-pencil/*"
+    groups:
+      openpencil:
+        patterns: ["@open-pencil/*"]
+    commit-message:
+      prefix: fix
+      include: scope
+    labels: [dependencies, openpencil]
+    open-pull-requests-limit: 3
+
+  # Everything else (Vue, Vite, tooling): weekly, grouped.
+  - package-ecosystem: npm
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: "@open-pencil/*"
+    groups:
+      tooling:
+        patterns: ["*"]
+    commit-message:
+      prefix: chore
+      include: scope
+    labels: [dependencies]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
