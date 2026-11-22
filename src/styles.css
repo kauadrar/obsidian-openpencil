@@ -33,7 +33,7 @@
   --op-accent: #0d99ff;
   --op-on-accent: #fff;
   --op-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.06);
-  --op-swatch-ring: rgba(255, 255, 255, 0.12);
+  --op-swatch-ring: rgba(255, 255, 255, 0.18);
 
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr) 248px;
@@ -54,7 +54,7 @@
   --op-text-muted: #6b6b6b;
   --op-text-faint: #a5a5a5;
   --op-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.08);
-  --op-swatch-ring: rgba(0, 0, 0, 0.1);
+  --op-swatch-ring: rgba(0, 0, 0, 0.14);
 }
 .op-shell.is-collapsed {
   grid-template-columns: minmax(0, 1fr) 248px;
@@ -449,6 +449,7 @@
 /* Fields share one look: a rounded grey box, with a dim label in front. */
 .op-shell .op-field,
 .op-shell .op-color {
+  font-size: 11px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -493,7 +494,8 @@
 }
 .op-shell .op-color {
   flex: none;
-  padding: 0 0 0 5px;
+  padding: 0 0 0 7px;
+  gap: 8px;
 }
 /* Only a fill or stroke row stretches the field; in a section's column flex: 1 would squash it. */
 .op-shell .op-paint .op-color {
@@ -502,9 +504,9 @@
 .op-shell .op-swatch {
   position: relative;
   flex: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
   overflow: hidden;
   background:
     linear-gradient(var(--swatch), var(--swatch)) left / 50% 100% no-repeat,
