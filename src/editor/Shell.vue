@@ -72,7 +72,7 @@ function onFailed(e: unknown) {
       </ToolbarRoot>
 
       <div v-if="readOnly" class="op-banner">
-        OpenPencil can't write .pen files. Run “Save as .fig” to keep your edits.
+        OpenPencil can't write this file format. Run “Save as .fig” to keep your edits.
       </div>
       <div v-if="status === 'loading'" class="op-overlay">Starting OpenPencil…</div>
       <div v-else-if="status === 'failed'" class="op-overlay is-error">
