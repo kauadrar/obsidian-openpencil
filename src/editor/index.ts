@@ -6,7 +6,9 @@
 import '@open-pencil/core/runtime-assets/install'
 
 import { createApp, defineComponent, h, reactive, ref, type App as VueApp } from 'vue'
-import { createDefaultEditorState, createEditor, type Editor } from '@open-pencil/core'
+import { createDefaultEditorState, createDocumentGraph, createEditor, type Editor } from '@open-pencil/core'
+import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
+import { setPageBackgrounds } from '@open-pencil/core/figma-api'
 import { exportFigFile, parseFigFile } from '@open-pencil/core/io/formats/fig'
 import { penFormat } from '@open-pencil/core/io'
 import { getCanvasKit } from '@open-pencil/core/canvaskit'
@@ -62,11 +64,51 @@ async function readGraph(opts: MountOptions): Promise<SceneGraph> {
   return result.graph
 }
 
+type Theme = 'light' | 'dark'
+
+/** Obsidian's interface theme, which the editor follows as OpenPencil follows its own. */
+function obsidianTheme(): Theme {
+  return document.body.classList.contains('theme-dark') ? 'dark' : 'light'
+}
+
+const RULER_THEMES = {
+  dark: {
+    background: { r: 0.14, g: 0.14, b: 0.14, a: 1 },
+    tick: { r: 0.4, g: 0.4, b: 0.4, a: 1 },
+    text: { r: 0.6, g: 0.6, b: 0.6, a: 1 },
+  },
+  light: {
+    background: { r: 0.98, g: 0.98, b: 0.98, a: 1 },
+    tick: { r: 0.75, g: 0.75, b: 0.75, a: 1 },
+    text: { r: 0.45, g: 0.45, b: 0.45, a: 1 },
+  },
+} as const
+
+/**
+ * Gives pages that store no background the default for the interface theme, as OpenPencil does
+ * for a page made in it. Without this they draw on core's light fallback even in a dark theme.
+ */
+function fillMissingPageBackgrounds(graph: SceneGraph, theme: Theme) {
+  for (const page of graph.getPages()) {
+    const raw = page.source?.fig?.rawNodeFields
+    if (raw && (raw.backgroundPaints !== undefined || raw.backgroundColor !== undefined)) continue
+    try {
+      setPageBackgrounds(graph, page, [
+        { type: 'SOLID', color: { ...PAGE_DEFAULT_BACKGROUNDS[theme] }, opacity: 1, visible: true, blendMode: 'NORMAL' },
+      ])
+    } catch (e) {
+      console.warn('[openpencil] could not set a page background', e)
+    }
+  }
+}
+
 /** Asked of OpenPencil itself, so the plugin follows it if it learns to write .pen. */
 const penWritable = !!penFormat.support.writeDocument && !!penFormat.writeDocument
 
 export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<MountedEditor> {
   const graph = await readGraph(opts)
+  const theme = obsidianTheme()
+  fillMissingPageBackgrounds(graph, theme)
   const page = graph.getPages()[0]
   if (!page) throw new Error('This document has no pages.')
 
@@ -75,6 +117,14 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
     state: reactive(createDefaultEditorState(page.id)),
     getViewportSize: () => ({ width: el.clientWidth || 800, height: el.clientHeight || 600 }),
   })
+
+  const applyTheme = (t: Theme) => {
+    editor.state.theme = t
+    editor.state.rulerTheme = { ...RULER_THEMES[t] }
+  }
+  applyTheme(theme)
+  const themeObserver = new MutationObserver(() => applyTheme(obsidianTheme()))
+  themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] })
 
   const canWrite = opts.extension === 'fig' || penWritable
   const active = ref(true)
@@ -92,6 +142,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
           editor,
           active,
           readOnly: !canWrite,
+          fileName: opts.fileName.replace(/\.[^.]+$/, ''),
           onSave: () => opts.onSaveRequest(),
         })
     },
@@ -122,6 +173,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
     exportFig,
     destroy() {
       offHistory()
+      themeObserver.disconnect()
       app.unmount()
       editor.dispose()
     },
@@ -130,5 +182,5 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
 
 /** An empty one-page .fig document, for "New OpenPencil design". */
 export async function createBlankFig(documentName: string): Promise<Uint8Array> {
-  return exportFigFile(new SceneGraph(), { documentName })
+  return exportFigFile(createDocumentGraph('design', obsidianTheme()), { documentName })
 }
