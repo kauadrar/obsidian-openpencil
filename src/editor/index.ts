@@ -33,6 +33,10 @@ export interface MountedEditor {
   readonly editor: Editor
   /** Whether this editor takes keyboard input; Obsidian can show several editors at once. */
   setActive(active: boolean): void
+  /** Whether OpenPencil can write this document's own format back; false for .pen today. */
+  readonly canWrite: boolean
+  /** The document in its own format. Throws when `canWrite` is false. */
+  exportNative(documentName?: string): Promise<Uint8Array>
   /** The document as a .fig file. */
   exportFig(documentName?: string): Promise<Uint8Array>
   destroy(): void
@@ -58,6 +62,9 @@ async function readGraph(opts: MountOptions): Promise<SceneGraph> {
   return result.graph
 }
 
+/** Asked of OpenPencil itself, so the plugin follows it if it learns to write .pen. */
+const penWritable = !!penFormat.support.writeDocument && !!penFormat.writeDocument
+
 export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<MountedEditor> {
   const graph = await readGraph(opts)
   const page = graph.getPages()[0]
@@ -69,6 +76,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
     getViewportSize: () => ({ width: el.clientWidth || 800, height: el.clientHeight || 600 }),
   })
 
+  const canWrite = opts.extension === 'fig' || penWritable
   const active = ref(true)
   const offHistory = editor.onEditorEvent('history:changed', (change) => {
     if (change !== 'clear') opts.onChange()
@@ -83,7 +91,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
         h(Shell, {
           editor,
           active,
-          readOnly: opts.extension === 'pen',
+          readOnly: !canWrite,
           onSave: () => opts.onSaveRequest(),
         })
     },
@@ -91,19 +99,27 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
   const app: VueApp = createApp(Root)
   app.mount(el)
 
+  const exportFig = async (documentName?: string) =>
+    // CanvasKit is already loaded by the canvas; it draws the file's thumbnail.png.
+    exportFigFile(editor.graph, {
+      ck: await getCanvasKit(),
+      renderer: editor.renderer ?? undefined,
+      documentName,
+    })
+
   return {
     editor,
     setActive(next) {
       active.value = next
     },
-    async exportFig(documentName) {
-      // CanvasKit is already loaded by the canvas; it draws the file's thumbnail.png.
-      return exportFigFile(editor.graph, {
-        ck: await getCanvasKit(),
-        renderer: editor.renderer ?? undefined,
-        documentName,
-      })
+    canWrite,
+    async exportNative(documentName) {
+      if (opts.extension === 'fig') return exportFig(documentName)
+      if (!penWritable) throw new Error('OpenPencil cannot write .pen files.')
+      const result = await penFormat.writeDocument!(editor.graph, { documentName })
+      return typeof result.data === 'string' ? new TextEncoder().encode(result.data) : new Uint8Array(result.data)
     },
+    exportFig,
     destroy() {
       offHistory()
       app.unmount()

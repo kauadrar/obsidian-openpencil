@@ -157,7 +157,7 @@ class DesignView extends FileView {
   }
 
   private markDirty() {
-    if (this.file?.extension !== 'fig') return // .pen cannot be written back
+    if (!this.mounted?.canWrite) return // OpenPencil cannot write this format back
     this.dirty = true
     if (this.saveTimer !== null) window.clearTimeout(this.saveTimer)
     this.saveTimer = window.setTimeout(() => void this.save(), AUTOSAVE_MS)
@@ -174,15 +174,15 @@ class DesignView extends FileView {
     const file = this.file
     const mounted = this.mounted
     if (!file || !mounted) return
-    if (file.extension !== 'fig') {
-      new Notice('OpenPencil cannot write .pen files. Use “Save as .fig”.')
+    if (!mounted.canWrite) {
+      new Notice(`OpenPencil cannot write .${file.extension} files. Use “Save as .fig”.`)
       return
     }
     if (this.saving) return this.saving.then(() => (this.dirty ? this.save() : undefined))
     this.dirty = false
     this.saving = (async () => {
       try {
-        const bytes = await mounted.exportFig(file.basename)
+        const bytes = await mounted.exportNative(file.basename)
         this.lastWritten = Date.now()
         await this.app.vault.modifyBinary(file, toArrayBuffer(bytes))
       } catch (e) {

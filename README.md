@@ -10,7 +10,7 @@ design editor, inside an Obsidian tab, the way the Excalidraw plugin handles `.e
 
 - Click a `.fig` or `.pen` file in your vault and it opens in an OpenPencil tab, with a canvas, page list and toolbar.
 - `.fig` edits **autosave** 1.5 s after you stop editing. They also save on **Mod+S**, when you close the tab and when you switch files.
-- `.pen` files open and can be edited, but OpenPencil can't write `.pen` yet: run **Save as .fig** to keep changes.
+- `.pen` files open and can be edited, but the plugin only does what OpenPencil does, and OpenPencil can't write `.pen` (as of 0.17.0): run **Save as .fig** to keep changes. If OpenPencil gains `.pen` writing, the plugin saves `.pen` too.
 - **New design** (command or ribbon icon) creates `Untitled design.fig` and opens it.
 - If a file changes on disk (sync, another app) while you have no unsaved edits, the tab reloads it.
 - Desktop only.
