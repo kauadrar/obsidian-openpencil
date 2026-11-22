@@ -28,8 +28,8 @@
     "husky": "^9.1.7",
     "obsidian": "^1.14.4",
     "playwright": "^1.65.1",
-    "typescript": "^6.0.3",
-    "vite": "^8.1.4",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
     "vue-tsc": "^3.3.14"
   },
   "description": "Unofficial OpenPencil design editor for Obsidian",
