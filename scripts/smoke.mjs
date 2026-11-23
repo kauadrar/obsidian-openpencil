@@ -436,6 +436,24 @@ try {
     check('Copy as SVG writes SVG markup and Copy as PNG writes image/png',
       copyAsSel.some((w) => w.kind === 'text' && w.text.includes('<svg')) &&
       copyAsSel.some((w) => w.kind === 'items' && w.types.includes('image/png')))
+
+    // Spec 11: mounted command palette bridge (canRunCommand / runCommand).
+    await page.evaluate(() => window.smokeEditor.clearSelection())
+    const noSelCmds = await page.evaluate(() => ({
+      dup: window.smokeMounted.canRunCommand('selection.duplicate'),
+      svg: window.smokeMounted.canRunCommand('app.copyAsSVG'),
+      rulers: window.smokeMounted.canRunCommand('app.toggleRulers'),
+    }))
+    check('Selection commands disabled with no selection, view commands enabled',
+      !noSelCmds.dup && !noSelCmds.svg && noSelCmds.rulers)
+
+    await page.evaluate((ids) => window.smokeEditor.select([ids.other]), s8)
+    await page.evaluate(() => window.smokeMounted.runCommand('app.renameSelection'))
+    await page.waitForSelector('.op-layer .op-rename')
+    await page.fill('.op-layer .op-rename', 'Cmd Renamed')
+    await page.keyboard.press('Enter')
+    check('app.renameSelection opens layer inline rename and commits',
+      await page.evaluate((id) => window.smokeEditor.graph.getNode(id)?.name === 'Cmd Renamed', s8.other))
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))

@@ -41,6 +41,7 @@
         },
       })
       window.smokeEditor = mounted.editor // for poking at the editor by hand from the console
+      window.smokeMounted = mounted
       // Wait for CanvasRoot's ready (the overlay goes away) or failure.
       for (let i = 0; i < 200; i++) {
         const overlay = host.querySelector('.op-overlay')
