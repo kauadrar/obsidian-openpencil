@@ -21,6 +21,7 @@ import { PLUGIN_COMMANDS } from './commands'
 import { createDesignEmbedExtension, DesignEmbedManager, processDesignEmbeds } from './embeds'
 import { DEFAULT_SETTINGS, sanitizeSettings, type OpenPencilSettings } from './settings'
 import { ensureEditorUnpacked } from './unpack'
+import { EditorLoadError, editorFailureText } from './editor-failure'
 import { createMcpRpcSender, type McpDocumentSummary, type McpHost } from './mcp/adapter'
 import type { McpServerController, McpServerStatus } from './mcp/server'
 
@@ -127,12 +128,13 @@ export default class OpenPencilPlugin extends Plugin {
         // Obsidian appends ?<mtime> to resource URLs, so an updated bundle is not served from cache.
         const url = adapter.getResourcePath(normalizePath(`${editorDir}/editor.js`))
         return import(/* @vite-ignore */ url) as Promise<typeof EditorModule>
+      }).catch((err: unknown) => {
+        throw new EditorLoadError(err)
       })
       this.editorModule.catch((err) => {
         this.editorModule = null
-        if (Platform.isMobile) {
-          new Notice(`OpenPencil v${this.manifest.version}: failed to load editor assets — ${message(err)}`, 10000)
-        }
+        console.error('[openpencil] editor failed to load', err)
+        if (Platform.isMobile) new Notice(editorFailureText(err instanceof EditorLoadError ? err.original : err, this.manifest.version, Platform.isAndroidApp), 10000)
       })
     }
     return this.editorModule
@@ -554,11 +556,11 @@ class DesignView extends FileView {
       this.mounted.setActive(this.app.workspace.getActiveViewOfType(DesignView) === this)
     } catch (e) {
       loading.setText('')
-      const msg = message(e)
-      host.createDiv({ cls: 'openpencil-error', text: `OpenPencil could not open ${file.name}: ${msg}` })
-      if (Platform.isMobile) {
-        new Notice(`OpenPencil v${this.plugin.manifest.version}: ${msg}`, 10000)
-      }
+      const detail = e instanceof EditorLoadError
+        ? editorFailureText(e.original, this.plugin.manifest.version, Platform.isAndroidApp)
+        : `OpenPencil v${this.plugin.manifest.version}: ${message(e)}`
+      host.createDiv({ cls: 'openpencil-error', text: `OpenPencil could not open ${file.name}: ${detail}` })
+      if (Platform.isMobile) new Notice(detail, 10000)
       console.error('[openpencil]', e)
     }
   }

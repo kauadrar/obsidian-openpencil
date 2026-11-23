@@ -38,6 +38,11 @@ design editor, inside an Obsidian tab, the way the Excalidraw plugin handles `.e
 > **Keep backups of Figma files.** OpenPencil warns that saving a complex Figma `.fig` can lose
 > fidelity when it is reopened in Figma. Autosave overwrites the file in place.
 
+## Known limitations
+
+- **Android:** this version can't open designs. Android's WebView blocks the editor's files, so the plugin shows a notice instead of opening the file. Desktop and iOS work. A fix is planned for a later release.
+- **Iconify icons** need an internet connection; offline, the Insert icon search shows a note instead of results.
+
 ## Install
 
 **From Obsidian:** *Settings → Community plugins → Browse → "OpenPencil Editor"* (once the plugin is accepted into the directory).
