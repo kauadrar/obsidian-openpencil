@@ -30,6 +30,7 @@ import BindableValueRow from './BindableValueRow.vue'
 import PageVariables from './PageVariables.vue'
 import ComponentProperties from './ComponentProperties.vue'
 import FramePresetSelect from './FramePresetSelect.vue'
+import FramePresetsPanel from './FramePresetsPanel.vue'
 import { readIcon } from '@open-pencil/scene-graph/icons'
 import InstanceProperties from './InstanceProperties.vue'
 import AutoLayoutSection from './AutoLayoutSection.vue'
@@ -410,8 +411,10 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
       <span class="op-design-tab is-active">Design</span>
     </div>
 
+    <!-- Frame tool with nothing drawn yet: the preset list only -->
+    <FramePresetsPanel v-if="!hasSelection && editor.state.activeTool === 'FRAME'" />
     <!-- Nothing selected: the page -->
-    <template v-if="!hasSelection">
+    <template v-else-if="!hasSelection">
       <section class="op-prop">
         <div class="op-prop-head">Page</div>
         <ColorField

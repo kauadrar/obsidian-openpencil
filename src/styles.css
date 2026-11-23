@@ -1922,3 +1922,75 @@
   border: 1px solid transparent;
   border-radius: 4px;
 }
+
+/* Frame tool presets list */
+.op-shell .op-frame-presets {
+  padding-bottom: 8px;
+}
+.op-shell .op-frame-presets-head {
+  padding: 0 8px;
+  border-bottom: 1px solid var(--op-border);
+}
+.op-shell .op-frame-group {
+  border-bottom: 1px solid var(--op-border);
+}
+.op-shell .op-frame-group-trigger {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 36px;
+  padding: 0 8px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--op-text);
+}
+.op-shell .op-frame-group-trigger:hover {
+  background: var(--op-hover);
+}
+.op-shell .op-frame-twisty {
+  display: inline-block;
+  width: 10px;
+  color: var(--op-text-muted);
+  transition: transform 0.1s;
+}
+.op-shell .op-frame-twisty.is-open {
+  transform: rotate(90deg);
+}
+.op-shell .op-frame-group-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.op-shell .op-frame-row {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 28px;
+  padding: 0 8px 0 26px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--op-text);
+}
+.op-shell .op-frame-row:hover {
+  background: var(--op-hover);
+}
+.op-shell .op-frame-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.op-shell .op-frame-row-size {
+  flex: none;
+  color: var(--op-text-muted);
+  font-variant-numeric: tabular-nums;
+}
