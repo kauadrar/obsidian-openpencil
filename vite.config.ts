@@ -12,6 +12,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '#mcp': fileURLToPath(new URL('./node_modules/@open-pencil/mcp/src', import.meta.url)),
+      'node:buffer': fileURLToPath(new URL('./src/mcp/buffer-shim.ts', import.meta.url)),
     },
   },
   define: { 'process.env.NODE_ENV': JSON.stringify('production') },

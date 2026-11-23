@@ -117,14 +117,24 @@ test('createMcpRpcSender dispatches document, app, and core tools', async () => 
   })
 
   assert.deepEqual(await rpc({ command: 'list_documents', args: {} }), {
-    documents: [{ path: 'a.fig', name: 'a.fig', open: true, active: true, dirty: false }],
+    ok: true,
+    result: { documents: [{ path: 'a.fig', name: 'a.fig', open: true, active: true, dirty: false }] },
   })
-  assert.deepEqual(await rpc({ command: 'undo', args: {} }), { undone: true })
-  assert.deepEqual(await rpc({ command: 'redo', args: {} }), { redone: false })
-  assert.deepEqual(await rpc({ command: 'get_codegen_prompt', args: {} }), { prompt: 'codegen-prompt' })
+  assert.deepEqual(await rpc({ command: 'undo', args: {} }), { ok: true, result: { undone: true } })
+  assert.deepEqual(await rpc({ command: 'redo', args: {} }), { ok: true, result: { redone: false } })
+  assert.deepEqual(await rpc({ command: 'get_codegen_prompt', args: {} }), {
+    ok: true,
+    result: { prompt: 'codegen-prompt' },
+  })
   assert.deepEqual(
-    await rpc({ command: 'get_selection', args: { document_id: 'a.fig' } }),
-    { command: 'get_selection', args: { document_id: 'a.fig' }, documentPath: 'a.fig' },
+    await rpc({
+      command: 'tool',
+      args: { name: 'get_selection', document_id: 'a.fig', args: { foo: 'bar' } },
+    }),
+    {
+      ok: true,
+      result: { command: 'get_selection', args: { foo: 'bar' }, documentPath: 'a.fig' },
+    },
   )
 })
 

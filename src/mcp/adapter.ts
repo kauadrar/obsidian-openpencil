@@ -43,67 +43,93 @@ export function createMcpRpcSender(host: McpHost): RPCSender {
         ? (body.args as Record<string, unknown>)
         : {}
 
+    let result: unknown
     switch (command) {
       case 'list_documents':
-        return { documents: host.listDocuments() }
+        result = { documents: host.listDocuments() }
+        break
 
       case 'open_document': {
         const path = asString(args.path ?? args.document_id ?? args.file, 'path')
-        return await host.openDocument(path)
+        result = await host.openDocument(path)
+        break
       }
 
       case 'close_document': {
         const path = asString(args.path ?? args.document_id ?? args.file, 'path')
         await host.closeDocument(path)
-        return { closed: true, path }
+        result = { closed: true, path }
+        break
       }
 
       case 'activate_document': {
         const path = asString(args.path ?? args.document_id ?? args.file, 'path')
         await host.activateDocument(path)
-        return { activated: true, path }
+        result = { activated: true, path }
+        break
       }
 
       case 'create_document': {
         const path = asString(args.path ?? args.name ?? args.file, 'path')
-        return await host.createDocument(path)
+        result = await host.createDocument(path)
+        break
       }
 
       case 'save_document': {
         const path = asString(args.path ?? args.document_id ?? args.file, 'path')
         await host.saveDocument(path)
-        return { saved: true, path }
+        result = { saved: true, path }
+        break
       }
 
       case 'list_recent_documents':
-        return { documents: host.listRecentDocuments() }
+        result = { documents: host.listRecentDocuments() }
+        break
 
       case 'undo': {
         const path = optionalString(args.path ?? args.document_id)
-        return { undone: await host.undo(path) }
+        result = { undone: await host.undo(path) }
+        break
       }
 
       case 'redo': {
         const path = optionalString(args.path ?? args.document_id)
-        return { redone: await host.redo(path) }
+        result = { redone: await host.redo(path) }
+        break
       }
 
       case 'get_settings':
-        return host.getSettings()
+        result = host.getSettings()
+        break
 
       case 'update_settings':
-        return await host.updateSettings(args)
+        result = await host.updateSettings(args)
+        break
 
       case 'get_codegen_prompt':
-        return { prompt: await host.getCodegenPrompt() }
+        result = { prompt: await host.getCodegenPrompt() }
+        break
+
+      case 'tool': {
+        const toolName = asString(args.name, 'name')
+        const toolArgs =
+          args.args && typeof args.args === 'object' && !Array.isArray(args.args)
+            ? (args.args as Record<string, unknown>)
+            : {}
+        const documentPath = optionalString(args.document_id ?? args.path ?? toolArgs.document_id ?? toolArgs.path)
+        result = await host.executeCoreTool(toolName, toolArgs, documentPath)
+        break
+      }
 
       default: {
         if (!command) {
           throw new Error('Missing MCP command')
         }
         const documentPath = optionalString(args.document_id ?? args.path)
-        return await host.executeCoreTool(command, args, documentPath)
+        result = await host.executeCoreTool(command, args, documentPath)
+        break
       }
     }
+    return { ok: true, result }
   }
 }

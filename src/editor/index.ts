@@ -304,6 +304,7 @@ export function registerMcpTools(mcpServer: McpServer, sendRPC: RPCSender): void
       allowEval: false,
       scope: 'document',
     },
+    mcpRoot: '/',
     sendRPC,
   })
 }
