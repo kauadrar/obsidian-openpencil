@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto'
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { gzipSync } from 'node:zlib'
+import { checkEditorGraph } from './check-editor-graph.mjs'
 
 const root = 'build/editor'
 
@@ -37,4 +38,5 @@ writeFileSync(
   'build/editor-payload.js',
   `export const PAYLOAD_ID = ${JSON.stringify(id)}\nexport const PAYLOAD = ${JSON.stringify(gz.toString('base64'))}\n`,
 )
+await checkEditorGraph(root) // throws, failing the build, on an import cycle
 console.log(`packed ${files.length} files: ${(raw.length / 1e6).toFixed(1)} MB → ${(gz.length / 1e6).toFixed(1)} MB gzip (id ${id})`)

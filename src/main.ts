@@ -22,6 +22,8 @@ import { createDesignEmbedExtension, DesignEmbedManager, processDesignEmbeds } f
 import { DEFAULT_SETTINGS, sanitizeSettings, type OpenPencilSettings } from './settings'
 import { ensureEditorUnpacked } from './unpack'
 import { EditorLoadError, editorFailureText } from './editor-failure'
+import { loadEditorBlobs, type LoadedEditor } from './android/blob-loader'
+import { readEditorFiles } from './android/editor-files'
 import { createMcpRpcSender, type McpDocumentSummary, type McpHost } from './mcp/adapter'
 import type { McpServerController, McpServerStatus } from './mcp/server'
 
@@ -31,6 +33,8 @@ const AUTOSAVE_MS = 1500
 
 export default class OpenPencilPlugin extends Plugin {
   private editorModule: Promise<typeof EditorModule> | null = null
+  /** Android only: the editor's chunks as blob URLs, revoked on unload. */
+  private editorBlobs: LoadedEditor | null = null
   private embedManager: DesignEmbedManager | null = null
   private mcpServer: McpServerController | null = null
   settings: OpenPencilSettings = { ...DEFAULT_SETTINGS }
@@ -112,6 +116,8 @@ export default class OpenPencilPlugin extends Plugin {
   }
 
   onunload() {
+    this.editorBlobs?.dispose()
+    this.editorBlobs = null
     void this.mcpServer?.stop()
     this.mcpServer = null
     this.embedManager?.destroy()
@@ -124,7 +130,13 @@ export default class OpenPencilPlugin extends Plugin {
     if (!this.editorModule) {
       const dir = this.manifest.dir ?? `${this.app.vault.configDir}/plugins/${this.manifest.id}`
       const adapter = this.app.vault.adapter
-      this.editorModule = ensureEditorUnpacked(adapter, dir).then((editorDir) => {
+      this.editorModule = ensureEditorUnpacked(adapter, dir).then(async (editorDir) => {
+        if (Platform.isAndroidApp) {
+          // Android's WebView refuses module imports from the file URL, so the chunks load as blobs (see src/android).
+          const loaded = loadEditorBlobs(await readEditorFiles(adapter, editorDir))
+          this.editorBlobs = loaded
+          return import(/* @vite-ignore */ loaded.entryUrl) as Promise<typeof EditorModule>
+        }
         // Obsidian appends ?<mtime> to resource URLs, so an updated bundle is not served from cache.
         const url = adapter.getResourcePath(normalizePath(`${editorDir}/editor.js`))
         return import(/* @vite-ignore */ url) as Promise<typeof EditorModule>
