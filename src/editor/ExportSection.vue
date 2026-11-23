@@ -10,6 +10,7 @@ import { getCanvasKit } from '@open-pencil/core/canvaskit'
 import { useExport } from '@open-pencil/vue/document/export'
 import { DESIGN_NAME, NOTIFY, WRITE_EXPORT, type WriteExport } from './context'
 import { buildExportFileName } from './export-name'
+import { EXPORT_SCALE_PRESETS, exportScaleLabel, parseExportScale } from './export-scale'
 
 const ex = useExport()
 const writeExport = inject(WRITE_EXPORT, null)
@@ -24,7 +25,16 @@ const settings = computed(() => ex.activeSettings.value)
 const busy = ref(false)
 const status = ref('')
 
-const scaleLabel = (s: number) => `${s}x`
+/** A typed scale is committed on Enter or when the field loses focus; text that is not a scale reverts. */
+function commitScale(index: number, field: HTMLInputElement, current: number) {
+  const next = parseExportScale(field.value)
+  if (next === null) {
+    field.value = exportScaleLabel(current)
+    return
+  }
+  ex.updateScale(index, next)
+  field.value = exportScaleLabel(next)
+}
 
 function fileName(setting: ExportSetting, ext: string) {
   const ids = ex.targetIds.value
@@ -97,16 +107,22 @@ async function runExport() {
     </div>
     <div v-if="ex.mixed.value" class="op-prop-note">Click + to replace mixed export settings</div>
     <template v-else>
+      <datalist id="op-export-scale-presets">
+        <option v-for="p in EXPORT_SCALE_PRESETS" :key="p" :value="exportScaleLabel(p)" />
+      </datalist>
       <div v-for="(setting, i) in settings" :key="i" class="op-paint">
         <label class="op-field op-export-scale" :class="{ 'is-disabled': !ex.formatSupportsScale(setting.format) }">
-          <select
-            :value="setting.scale"
+          <input
+            type="text"
+            list="op-export-scale-presets"
+            spellcheck="false"
+            :value="exportScaleLabel(setting.scale)"
             :disabled="!ex.formatSupportsScale(setting.format)"
-            @change="(e: Event) => ex.updateScale(i, Number((e.target as HTMLSelectElement).value))"
-          >
-            <option v-if="!ex.scales.includes(setting.scale as never)" :value="setting.scale">{{ scaleLabel(setting.scale) }}</option>
-            <option v-for="s in ex.scales" :key="s" :value="s">{{ scaleLabel(s) }}</option>
-          </select>
+            aria-label="Export scale"
+            title="Export scale (0.01x to 1024x)"
+            @keydown.stop="(e: KeyboardEvent) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()"
+            @blur="(e: FocusEvent) => commitScale(i, e.target as HTMLInputElement, setting.scale)"
+          />
         </label>
         <label class="op-field op-export-format">
           <select :value="setting.format" @change="(e: Event) => ex.updateFormat(i, (e.target as HTMLSelectElement).value as ExportSetting['format'])">
