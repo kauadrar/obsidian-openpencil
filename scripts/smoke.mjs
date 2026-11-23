@@ -176,6 +176,63 @@ try {
     await page.keyboard.press('i')
     check('Panel input focus blocks canvas shortcuts', await page.evaluate(() => window.smokeEditor.state.activeTool === 'SELECT'))
     await page.evaluate(() => (document.activeElement)?.blur?.())
+
+    // Spec 06: canvas & layer context menu.
+    await page.evaluate(() => window.smokeEditor.clearSelection())
+    await page.click('.op-layer', { button: 'right' })
+    const layerMenu = await page.evaluate(() => {
+      const m = window.smokeLastMenu?.entries ?? []
+      const labels = m.filter((e) => !e.separator).map((e) => e.label)
+      return {
+        selected: window.smokeEditor.state.selectedIds.size,
+        labels,
+        copyDisabled: m.find((e) => e.label === 'Copy')?.disabled,
+      }
+    })
+    check('Right-click on layer row selects it and opens menu', layerMenu.selected === 1 && layerMenu.labels.includes('Copy') && layerMenu.labels.includes('Duplicate') && !layerMenu.copyDisabled)
+
+    // Right-click on empty canvas clears selection and disables selection-only items.
+    await page.click('.op-surface', { button: 'right', position: { x: 5, y: 5 } })
+    const emptyMenu = await page.evaluate(() => {
+      const m = window.smokeLastMenu?.entries ?? []
+      return {
+        selected: window.smokeEditor.state.selectedIds.size,
+        copyDisabled: m.find((e) => e.label === 'Copy')?.disabled,
+        pasteDisabled: m.find((e) => e.label === 'Paste')?.disabled,
+        duplicateDisabled: m.find((e) => e.label === 'Duplicate')?.disabled,
+      }
+    })
+    check('Right-click on empty canvas disables selection-only items', emptyMenu.selected === 0 && emptyMenu.copyDisabled === true && emptyMenu.duplicateDisabled === true && !emptyMenu.pasteDisabled)
+
+    // Hide/Show, Lock/Unlock, Move to page, Auto arrange.
+    await page.evaluate((ids) => {
+      const ed = window.smokeEditor
+      const page1 = ed.state.currentPageId
+      ed.addPage('Page 2')
+      ed.switchPage(page1)
+      ed.updateNode(ids.a, { visible: false, locked: true })
+      ed.select([ids.a])
+    }, setupIds)
+    await page.locator('.op-layer', { hasText: 'KB A' }).click({ button: 'right' })
+    const single = await page.evaluate(() => {
+      const m = window.smokeLastMenu?.entries ?? []
+      const labels = m.filter((e) => !e.separator).map((e) => e.label)
+      const move = m.find((e) => e.label === 'Move to page')
+      return {
+        hasShow: labels.includes('Show'),
+        hasUnlock: labels.includes('Unlock'),
+        movePages: move?.sub?.map((s) => s.label) ?? [],
+        hasAutoArrange: labels.includes('Auto arrange'),
+      }
+    })
+    check('Hide/Show and Lock/Unlock labels follow selection state', single.hasShow && single.hasUnlock)
+    check('Move to page lists only other pages', single.movePages.length === 1 && single.movePages[0] === 'Page 2')
+    check('Auto arrange hidden for single selection', !single.hasAutoArrange)
+
+    await page.evaluate((ids) => window.smokeEditor.select([ids.a, ids.b]), setupIds)
+    await page.locator('.op-layer', { hasText: 'KB A' }).click({ button: 'right' })
+    const multi = await page.evaluate(() => (window.smokeLastMenu?.entries ?? []).some((e) => e.label === 'Auto arrange'))
+    check('Auto arrange shown for 2+ selected layers', multi)
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))

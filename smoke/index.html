@@ -36,6 +36,9 @@
       mounted = await mod.mountEditor(host, {
         data, fileName, extension: fileName.endsWith('.pen') ? 'pen' : 'fig',
         onChange: () => changes++, onSaveRequest() {},
+        showContextMenu(entries, pos) {
+          window.smokeLastMenu = { entries, pos }
+        },
       })
       window.smokeEditor = mounted.editor // for poking at the editor by hand from the console
       // Wait for CanvasRoot's ready (the overlay goes away) or failure.
