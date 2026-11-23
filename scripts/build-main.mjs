@@ -10,7 +10,7 @@ await build({
   platform: 'browser',
   target: 'es2022',
   outfile: 'dist/main.js',
-  external: ['obsidian', 'electron'],
+  external: ['obsidian', 'electron', '@codemirror/state', '@codemirror/view'],
   legalComments: 'none',
   logLevel: 'info',
 })

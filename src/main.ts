@@ -17,6 +17,7 @@ import {
 } from 'obsidian'
 import type * as EditorModule from './editor/index'
 import { PLUGIN_COMMANDS } from './commands'
+import { createDesignEmbedExtension, DesignEmbedManager, processDesignEmbeds } from './embeds'
 import { DEFAULT_SETTINGS, sanitizeSettings, type OpenPencilSettings } from './settings'
 import { ensureEditorUnpacked } from './unpack'
 
@@ -26,11 +27,22 @@ const AUTOSAVE_MS = 1500
 
 export default class OpenPencilPlugin extends Plugin {
   private editorModule: Promise<typeof EditorModule> | null = null
+  private embedManager: DesignEmbedManager | null = null
   settings: OpenPencilSettings = { ...DEFAULT_SETTINGS }
 
   async onload() {
     this.settings = sanitizeSettings(await this.loadData())
     this.addSettingTab(new OpenPencilSettingTab(this.app, this))
+
+    this.embedManager = new DesignEmbedManager(this.app)
+    this.registerMarkdownPostProcessor((el, ctx) => processDesignEmbeds(this.app, this.embedManager!, el, ctx))
+    this.registerEditorExtension(createDesignEmbedExtension(this.app, this.embedManager))
+    this.registerEvent(this.app.vault.on('modify', (file) => this.embedManager?.refreshPath(file.path)))
+    this.registerEvent(this.app.vault.on('delete', (file) => this.embedManager?.refreshPath(file.path)))
+    this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
+      this.embedManager?.refreshPath(oldPath)
+      this.embedManager?.refreshPath(file.path)
+    }))
 
     this.registerView(VIEW_TYPE, (leaf) => new DesignView(leaf, this))
     this.registerExtensions([...EXTENSIONS], VIEW_TYPE)
@@ -79,6 +91,11 @@ export default class OpenPencilPlugin extends Plugin {
         },
       })
     }
+  }
+
+  onunload() {
+    this.embedManager?.destroy()
+    this.embedManager = null
   }
 
   /** Loads the editor bundle once. A dynamic import of the plugin folder's own URL keeps
