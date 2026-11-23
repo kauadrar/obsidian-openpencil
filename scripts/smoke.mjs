@@ -603,10 +603,34 @@ try {
       okhclInfo.sliders === 4 && okhclInfo.hasGamut,
       JSON.stringify(okhclInfo))
 
+    // Switch back to RGB and verify SV square + Hue + Alpha sliders actually change colour.
+    await page.locator('.op-cp-select').selectOption('rgb')
+    const initialHex = await page.locator('.op-hex').first().inputValue()
+    const areaBox = await page.locator('.op-cp-area').boundingBox()
+    await page.mouse.click(areaBox.x + areaBox.width * 0.85, areaBox.y + areaBox.height * 0.25)
+    const afterAreaHex = await page.locator('.op-hex').first().inputValue()
+    const hueBox = await page.locator('.op-cp-slider').first().boundingBox()
+    await page.mouse.click(hueBox.x + hueBox.width * 0.65, hueBox.y + hueBox.height / 2)
+    const afterHueHex = await page.locator('.op-hex').first().inputValue()
+    const alphaBox = await page.locator('.op-cp-alpha').boundingBox()
+    await page.mouse.click(alphaBox.x + alphaBox.width * 0.5, alphaBox.y + alphaBox.height / 2)
+    const afterAlpha = await page.locator('.op-color-opacity input').first().inputValue()
+    check('SV square, Hue slider, and Alpha slider update colour and opacity live',
+      afterAreaHex !== initialHex && afterHueHex !== afterAreaHex && afterAlpha !== '100%',
+      `${initialHex} -> ${afterAreaHex} -> ${afterHueHex}, alpha=${afterAlpha}`)
+
+    // Eyedropper button arms EYEDROPPER and Escape cancels it.
+    await page.locator('.op-cp-eyedropper').click()
+    const toolArmed = await page.evaluate(() => window.smokeEditor.state.activeTool)
+    await page.keyboard.press('Escape')
+    const toolAfterEsc = await page.evaluate(() => window.smokeEditor.state.activeTool)
+    check('Eyedropper arms from picker and Escape cancels it',
+      toolArmed === 'EYEDROPPER' && toolAfterEsc === 'SELECT',
+      `${toolArmed} -> ${toolAfterEsc}`)
+
     // Close popover, edit inline hex, and verify undo.
     await page.keyboard.press('Escape')
     const hexInput = page.locator('.op-hex').first()
-    const beforeHex = await hexInput.inputValue()
     await hexInput.click()
     await hexInput.fill('FF5500')
     await hexInput.press('Enter')
@@ -614,8 +638,8 @@ try {
     await page.keyboard.press(`${mod}+z`)
     const undoneHex = await hexInput.inputValue()
     check('Inline hex edits fill color and Undo reverts it',
-      afterHex === 'FF5500' && undoneHex === beforeHex,
-      `${beforeHex} -> ${afterHex} -> ${undoneHex}`)
+      afterHex === 'FF5500' && undoneHex === initialHex,
+      `${initialHex} -> ${afterHex} -> ${undoneHex}`)
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
