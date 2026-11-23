@@ -818,9 +818,9 @@ try {
     await page.waitForTimeout(100)
     await page.locator('.op-font-picker-trigger').click()
     await page.waitForTimeout(150)
-    await page.locator('.op-font-picker-search').fill('Georgia')
+    await page.locator('.op-font-picker-search').fill('Int')
     await page.waitForTimeout(100)
-    await page.locator('.op-font-picker-item', { hasText: 'Georgia' }).first().click()
+    await page.locator('.op-font-picker-item', { hasText: 'Inter' }).first().click()
     await page.waitForTimeout(100)
     await page.locator('button[title="Vertical align middle"]').click()
     await page.locator('button[title="Bold"]').click()
@@ -838,7 +838,7 @@ try {
       }
     })
     check('Typography: FontPicker, vertical align, B/U, and text case work',
-      spec22Res.fontFamily === 'Georgia' &&
+      spec22Res.fontFamily === 'Inter' &&
       spec22Res.textAlignVertical === 'CENTER' &&
       spec22Res.fontWeight >= 600 &&
       spec22Res.textDecoration === 'UNDERLINE' &&

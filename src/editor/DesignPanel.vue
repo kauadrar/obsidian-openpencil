@@ -44,16 +44,7 @@ const showContextMenu = inject(SHOW_CONTEXT_MENU, null)
 const hasSelection = computed(() => nodes.value.length > 0)
 const isText = computed(() => nodes.value.length > 0 && nodes.value.some((n) => n.type === 'TEXT'))
 
-const BUNDLED_FAMILIES: string[] = [
-  'Inter',
-  'Arial',
-  'Helvetica',
-  'Georgia',
-  'Times New Roman',
-  'Courier New',
-  'Verdana',
-  'Trebuchet MS',
-]
+const BUNDLED_FAMILIES: string[] = ['Inter']
 
 let localFontState: 'unsupported' | 'prompt' | 'granted' | 'denied' =
   typeof window !== 'undefined' && 'queryLocalFonts' in window ? 'prompt' : 'unsupported'
