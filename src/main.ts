@@ -11,6 +11,7 @@ import {
   PluginSettingTab,
   Setting,
   TFile,
+  TFolder,
   normalizePath,
   type WorkspaceLeaf,
 } from 'obsidian'
@@ -35,6 +36,17 @@ export default class OpenPencilPlugin extends Plugin {
     this.registerExtensions([...EXTENSIONS], VIEW_TYPE)
 
     this.addRibbonIcon('pen-tool', 'New OpenPencil design', () => this.createDesign())
+    this.registerEvent(
+      this.app.workspace.on('file-menu', (menu, file) => {
+        if (!(file instanceof TFolder)) return
+        menu.addItem((item) =>
+          item
+            .setTitle('New design')
+            .setIcon('pen-tool')
+            .onClick(() => void this.createDesign(file)),
+        )
+      }),
+    )
     this.addCommand({
       id: 'new-design',
       name: 'New design',
@@ -93,15 +105,17 @@ export default class OpenPencilPlugin extends Plugin {
     }
   }
 
-  private async createDesign() {
+  private async createDesign(folder?: TFolder) {
     try {
       const mod = await this.loadEditor()
-      const parent = this.app.fileManager.getNewFileParent(this.app.workspace.getActiveFile()?.path ?? '')
+      const parent = folder ?? this.app.fileManager.getNewFileParent(this.app.workspace.getActiveFile()?.path ?? '')
+      const targetPath = (fileName: string) =>
+        parent.isRoot() ? `${fileName}.fig` : normalizePath(`${parent.path}/${fileName}.fig`)
       let name = 'Untitled design'
-      let path = normalizePath(`${parent.path}/${name}.fig`)
+      let path = targetPath(name)
       for (let i = 1; this.app.vault.getAbstractFileByPath(path); i++) {
         name = `Untitled design ${i}`
-        path = normalizePath(`${parent.path}/${name}.fig`)
+        path = targetPath(name)
       }
       const data = await mod.createBlankFig(name)
       const file = await this.app.vault.createBinary(path, toArrayBuffer(data))
