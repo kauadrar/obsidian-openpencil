@@ -62,6 +62,9 @@
 .op-shell.is-collapsed {
   grid-template-columns: minmax(0, 1fr) 248px;
 }
+.op-shell.is-preview {
+  grid-template-columns: minmax(0, 1fr);
+}
 
 /* Obsidian styles every <button>; the shell's buttons start from nothing. */
 .op-shell button {

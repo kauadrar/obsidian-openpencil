@@ -2,7 +2,7 @@
 // The editor shell, laid out like OpenPencil's own window: a sidebar with pages and layers,
 // the canvas with rulers, and a floating icon toolbar. Built from @open-pencil/vue's unstyled
 // primitives; the look lives in styles.css under .op-shell.
-import { computed, defineComponent, h, inject, provide, ref, watchEffect, type Ref } from 'vue'
+import { computed, defineComponent, h, inject, onMounted, onUnmounted, provide, ref, watchEffect, type Ref } from 'vue'
 import { EDITOR_TOOLS, type Editor, type Tool } from '@open-pencil/core'
 import { CanvasRoot, CanvasSurface, useCanvasContext, useCanvasInput } from '@open-pencil/vue/canvas'
 import { useTextEdit } from '@open-pencil/vue/canvas/text-edit'
@@ -261,8 +261,26 @@ const error = ref('')
 
 function onReady() {
   status.value = 'ready'
-  props.editor.zoomToFit()
+  requestAnimationFrame(() => props.editor.zoomToFit())
 }
+
+const onPreviewResize = () => {
+  if (props.previewOnly && status.value === 'ready') {
+    requestAnimationFrame(() => props.editor.zoomToFit())
+  }
+}
+
+onMounted(() => {
+  if (props.previewOnly) {
+    window.addEventListener('resize', onPreviewResize)
+    window.addEventListener('orientationchange', onPreviewResize)
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', onPreviewResize)
+  window.removeEventListener('orientationchange', onPreviewResize)
+})
 function onFailed(e: unknown) {
   status.value = 'failed'
   error.value = e instanceof Error ? e.message : String(e ?? 'CanvasKit could not start.')
@@ -444,7 +462,7 @@ defineExpose({ canRunCommand, runCommand, placeFiles })
 </script>
 
 <template>
-  <div class="op-shell" :class="{ 'is-collapsed': !sidebarOpen || previewOnly }">
+  <div class="op-shell" :class="{ 'is-collapsed': !sidebarOpen, 'is-preview': previewOnly }">
     <aside v-if="!previewOnly && sidebarOpen" class="op-sidebar">
       <header class="op-doc">
         <span class="op-doc-name" :title="fileName">{{ fileName }}</span>
