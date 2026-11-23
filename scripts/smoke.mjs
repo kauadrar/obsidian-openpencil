@@ -480,6 +480,55 @@ try {
       placeRes.ok && placeRes.hasPlaced && placeRes.okInFrame && placeRes.parentIsFrame)
     check('Unsupported file shows notice and inserts nothing',
       placeRes.badOk === false && String(placeRes.notice).includes('Unsupported file type'))
+
+    // Spec 13: Live settings application (snapping preferences + zoom speed).
+    const settingsRes = await page.evaluate(async () => {
+      const ed = window.smokeEditor
+      const mounted = window.smokeMounted
+      const canvas = document.querySelector('canvas')
+      if (!ed || !mounted || !canvas) return { missing: true }
+      const rect = canvas.getBoundingClientRect()
+      const nextFrame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))
+      const wheel = async () => {
+        canvas.dispatchEvent(new WheelEvent('wheel', {
+          deltaY: -100,
+          ctrlKey: true,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + rect.height / 2,
+          bubbles: true,
+          cancelable: true
+        }))
+        await nextFrame()
+      }
+
+      mounted.applySettings({ snapToGeometry: true, snapToObjects: true, snapToPixelGrid: true, zoomSpeed: 1 })
+      ed.state.zoom = 1
+      await wheel()
+      const deltaAt1 = Math.abs(ed.state.zoom - 1)
+
+      mounted.applySettings({ snapToGeometry: false, snapToObjects: false, snapToPixelGrid: false, zoomSpeed: 2 })
+      const prefsOff = { ...ed.state.snappingPreferences }
+      ed.state.zoom = 1
+      await wheel()
+      const deltaAt2 = Math.abs(ed.state.zoom - 1)
+
+      mounted.applySettings({ snapToGeometry: true, snapToObjects: true, snapToPixelGrid: true, zoomSpeed: 1 })
+      const prefsOn = { ...ed.state.snappingPreferences }
+      return { prefsOff, prefsOn, deltaAt1, deltaAt2 }
+    })
+    check('applySettings updates snappingPreferences live',
+      !settingsRes.missing &&
+      settingsRes.prefsOff.geometry === false &&
+      settingsRes.prefsOff.objects === false &&
+      settingsRes.prefsOff.pixelGrid === false &&
+      settingsRes.prefsOn.geometry === true &&
+      settingsRes.prefsOn.objects === true &&
+      settingsRes.prefsOn.pixelGrid === true)
+    check('applySettings updates zoomSpeed live for wheel zoom',
+      !settingsRes.missing &&
+      settingsRes.deltaAt1 > 0 &&
+      settingsRes.deltaAt2 > settingsRes.deltaAt1 * 1.5,
+      `Δ@1x=${settingsRes.deltaAt1?.toFixed(4)}, Δ@2x=${settingsRes.deltaAt2?.toFixed(4)}`)
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
