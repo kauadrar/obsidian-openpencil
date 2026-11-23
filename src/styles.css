@@ -6,6 +6,9 @@
 
 .openpencil-host {
   position: relative;
+  /* Own stacking context so nothing from the host app can paint between the editor's panels. */
+  isolation: isolate;
+  z-index: 0;
   width: 100%;
   height: 100%;
 }
@@ -256,10 +259,16 @@
 /* Toolbar: floats above Obsidian's status bar, which overlaps the bottom of the workspace. */
 .op-shell .op-toolbar {
   position: absolute;
-  left: 50%;
+  /* Centred without left:50% + translate, which caps the width at half the canvas. Wraps when narrow. */
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  width: fit-content;
+  max-width: calc(100% - 16px);
   bottom: 40px;
-  transform: translateX(-50%);
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 2px;
   padding: 4px;
@@ -383,6 +392,8 @@
   height: 44px;
   padding: 0 14px;
   border-bottom: 1px solid var(--op-border);
+  position: relative;
+  z-index: 1;
 }
 .op-shell .op-design-tab {
   font-weight: 600;
