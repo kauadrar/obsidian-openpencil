@@ -663,6 +663,23 @@ try {
     })
     await page.locator('button[title="Add gradient stop"]').click()
     const stopsAfterAdd = await page.locator('.op-grad-stop').count()
+    const stopPosInput = page.locator('.op-grad-stop .op-grad-pos input').nth(1)
+    await stopPosInput.click()
+    await stopPosInput.fill('30')
+    await stopPosInput.press('Enter')
+    const stopOpacityInput = page.locator('.op-grad-stop .op-color-opacity input').nth(1)
+    await stopOpacityInput.click()
+    await stopOpacityInput.fill('40')
+    await stopOpacityInput.press('Enter')
+    const stopVals = await page.evaluate(() => {
+      const ed = window.smokeEditor
+      const node = ed.getSelectedNode()
+      const stop = node?.fills?.[0]?.gradientStops?.[1]
+      return { pos: stop?.position, alpha: stop?.color?.a }
+    })
+    check('Gradient stop Position and Opacity fields parse typed percentages (30% / 40%)',
+      Math.abs((stopVals.pos ?? 0) - 0.3) < 0.01 && Math.abs((stopVals.alpha ?? 0) - 0.4) < 0.01,
+      JSON.stringify(stopVals))
     await page.locator('.op-fill-tab', { hasText: 'Image' }).click()
     const imgInfo = await page.evaluate(() => {
       const pop = document.querySelector('.op-cp-popover')
