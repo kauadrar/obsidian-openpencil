@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.0 highlights
+
+* **Android: the editor doesn't open designs yet.** Android's WebView blocks the editor's files, so the plugin now shows a clear notice instead of failing silently. Desktop and iOS work. A fix is planned for a later release.
+* **Colour picker:** stays open when a fill changes tab, so the gradient controls and "Add gradient stop" work.
+* **Known limitations:** Insert icon needs an internet connection; offline, it shows a note instead of results.
+
+## [0.4.0](https://github.com/kauadrar/obsidian-openpencil/compare/0.3.0...0.4.0) (2026-11-23)
+
+
+### Features
+
+* **android:** tell Android users the editor can't open designs yet ([750982c](https://github.com/kauadrar/obsidian-openpencil/commit/750982c2e5000c7ef1f967ad734f370c5ad9db1b))
+
+
+### Bug Fixes
+
+* **fills:** keep the colour picker mounted when a fill changes tab ([3f1c2be](https://github.com/kauadrar/obsidian-openpencil/commit/3f1c2be4be3e45ed64002f126b9b8ba267065bab))
+
 ## 0.3.0 highlights
 
 * **iOS (beta):** a read-only preview on iPhone and iPad. Pan with one finger, pinch to zoom, double-tap to fit, and switch pages from the top-left button. It never changes your file. Android is not verified yet.
