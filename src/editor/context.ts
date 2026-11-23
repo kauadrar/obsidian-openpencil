@@ -24,6 +24,10 @@ export type ShowContextMenu = (entries: ContextMenuEntry[], pos: { x: number; y:
 
 export const SHOW_CONTEXT_MENU: InjectionKey<ShowContextMenu> = Symbol('openpencil-show-context-menu')
 
+export type Notify = (message: string) => void
+
+export const NOTIFY: InjectionKey<Notify> = Symbol('openpencil-notify')
+
 export function toContextEntries(entries: readonly MenuEntry[]): ContextMenuEntry[] {
   return entries.map((entry) =>
     entry.separator

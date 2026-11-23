@@ -1,5 +1,9 @@
 import type { ClipboardSnapshot, Editor } from '@open-pencil/core'
+import { getCanvasKit } from '@open-pencil/core/canvaskit'
+import { pngFormat } from '@open-pencil/core/io'
+import { exportBounds, MAX_RASTER_PIXELS, oversizedRaster, rasterSize } from '@open-pencil/core/io/formats/raster'
 import type { Vector } from '@open-pencil/scene-graph/primitives'
+import type { Notify } from './context'
 
 let lastCopied: ClipboardSnapshot | null = null
 let lastProperties: ClipboardSnapshot | null = null
@@ -89,4 +93,58 @@ export async function pasteProperties(editor: Editor): Promise<void> {
     if (count > 0) return
   }
   if (lastProperties) await editor.pastePropertiesFromSnapshot(lastProperties)
+}
+
+/** Copies the selected layers as SVG markup text to the system clipboard. */
+export async function copySelectionAsSVG(editor: Editor, notify?: Notify): Promise<boolean> {
+  const ids = [...editor.state.selectedIds]
+  if (ids.length === 0) return false
+  const svg = await editor.copySelectionAsSVG(ids)
+  if (!svg) return false
+  if (!navigator.clipboard?.writeText) {
+    notify?.('Clipboard unavailable: could not copy SVG.')
+    return false
+  }
+  try {
+    await navigator.clipboard.writeText(svg)
+    return true
+  } catch {
+    notify?.('Clipboard permission denied: could not copy SVG.')
+    return false
+  }
+}
+
+/** Copies the selected layers as a 2x PNG image (capped at MAX_RASTER_PIXELS) to the system clipboard. */
+export async function copySelectionAsPNG(editor: Editor, notify?: Notify): Promise<boolean> {
+  const ids = [...editor.state.selectedIds]
+  if (ids.length === 0) return false
+  const bounds = exportBounds(editor.graph, ids)
+  if (!bounds) return false
+  let scale = 2
+  let scaledDown = false
+  const size = rasterSize(bounds, scale)
+  if (oversizedRaster(size.width, size.height)) {
+    const area = Math.max(1, (bounds.maxX - bounds.minX) * (bounds.maxY - bounds.minY))
+    scale = Math.max(0.01, Math.sqrt(MAX_RASTER_PIXELS / area) * 0.999)
+    scaledDown = true
+  }
+  const target = ids.length === 1 ? { scope: 'node' as const, nodeId: ids[0]! } : { scope: 'selection' as const, nodeIds: ids }
+  const result = await pngFormat.exportContent!(
+    { graph: editor.graph, target },
+    { scale },
+    { canvasKit: await getCanvasKit(), renderer: editor.renderer ?? undefined },
+  )
+  const bytes = typeof result.data === 'string' ? new TextEncoder().encode(result.data) : result.data
+  if (typeof ClipboardItem === 'undefined' || !navigator.clipboard?.write) {
+    notify?.('Clipboard unavailable: could not copy PNG.')
+    return false
+  }
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': new Blob([bytes as BlobPart], { type: 'image/png' }) })])
+    if (scaledDown) notify?.('Selection was scaled down to fit the PNG export limit.')
+    return true
+  } catch {
+    notify?.('Clipboard permission denied: could not copy PNG.')
+    return false
+  }
 }

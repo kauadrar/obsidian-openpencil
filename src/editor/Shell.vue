@@ -14,8 +14,8 @@ import { useEditorKeyboard } from '@open-pencil/vue/editor/keyboard'
 import { useMenuModel, type MenuEntry } from '@open-pencil/vue/editor/menu-model'
 import DesignPanel from './DesignPanel.vue'
 import ZoomMenu from './ZoomMenu.vue'
-import { copySelection, cutSelection, pasteSelection } from './clipboard'
-import { SHOW_CONTEXT_MENU, toContextEntries, type ContextMenuEntry } from './context'
+import { copySelection, copySelectionAsPNG, copySelectionAsSVG, cutSelection, pasteSelection } from './clipboard'
+import { NOTIFY, SHOW_CONTEXT_MENU, toContextEntries, type ContextMenuEntry } from './context'
 import { deletePageWithUndo, movePageWithUndo, renamePageWithUndo } from './pages'
 import { createAppShortcuts } from './shortcuts'
 import {
@@ -44,6 +44,7 @@ useEditorKeyboard({
 const showRulers = computed(() => (props.editor.state as typeof props.editor.state & { showRulers?: boolean }).showRulers !== false)
 
 const showContextMenu = inject(SHOW_CONTEXT_MENU, null)
+const notify = inject(NOTIFY, null)
 const { canvasMenu } = useMenuModel()
 
 function buildContextMenu(event: MouseEvent, cursorPos?: { x: number; y: number }) {
@@ -66,6 +67,21 @@ function buildContextMenu(event: MouseEvent, cursorPos?: { x: number; y: number 
       label: 'Paste',
       shortcut: formatShortcut('Mod+V'),
       action: () => void pasteSelection(props.editor, cursorPos),
+    },
+    {
+      label: 'Copy as',
+      sub: [
+        {
+          label: 'Copy as SVG',
+          disabled: !hasSelection,
+          action: () => void copySelectionAsSVG(props.editor, notify ?? undefined),
+        },
+        {
+          label: 'Copy as PNG',
+          disabled: !hasSelection,
+          action: () => void copySelectionAsPNG(props.editor, notify ?? undefined),
+        },
+      ],
     },
     { separator: true },
   ]

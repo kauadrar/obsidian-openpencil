@@ -7,14 +7,16 @@ import '@open-pencil/core/runtime-assets/install'
 
 import { createApp, defineComponent, h, provide, reactive, ref, type App as VueApp } from 'vue'
 import {
+  NOTIFY,
   SHOW_CONTEXT_MENU,
   WRITE_EXPORT,
   type ContextMenuEntry,
+  type Notify,
   type ShowContextMenu,
   type WriteExport,
 } from './context'
 
-export type { ContextMenuEntry, ShowContextMenu, WriteExport }
+export type { ContextMenuEntry, Notify, ShowContextMenu, WriteExport }
 import { createDefaultEditorState, createDocumentGraph, createEditor, type Editor, type Tool } from '@open-pencil/core'
 import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
 import { setPageBackgrounds } from '@open-pencil/core/figma-api'
@@ -57,6 +59,8 @@ export interface MountOptions {
   writeExport?: WriteExport
   /** Opens a context menu at viewport coordinates; Obsidian's Menu in the plugin. */
   showContextMenu?: ShowContextMenu
+  /** Shows a brief user notice (Obsidian's Notice). */
+  notify?: Notify
 }
 
 export interface MountedEditor {
@@ -182,6 +186,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
       provideEditor(editor)
       if (opts.writeExport) provide(WRITE_EXPORT, opts.writeExport)
       if (opts.showContextMenu) provide(SHOW_CONTEXT_MENU, opts.showContextMenu)
+      if (opts.notify) provide(NOTIFY, opts.notify)
       return () =>
         h(Shell, {
           editor,

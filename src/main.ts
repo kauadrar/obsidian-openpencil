@@ -141,6 +141,7 @@ class DesignView extends FileView {
         onSaveRequest: () => void this.save(),
         writeExport: (name, bytes) => this.writeExport(file, name, bytes),
         showContextMenu: (entries, pos) => this.showContextMenu(entries, pos),
+        notify: (msg) => new Notice(msg),
       })
       this.mounted.setActive(this.app.workspace.getActiveViewOfType(DesignView) === this)
     } catch (e) {
