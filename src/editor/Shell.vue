@@ -16,7 +16,8 @@ import { useMenuModel, type MenuEntry } from '@open-pencil/vue/editor/menu-model
 import DesignPanel from './DesignPanel.vue'
 import ZoomMenu from './ZoomMenu.vue'
 import { copySelection, copySelectionAsPNG, copySelectionAsSVG, cutSelection, exportSelection, pasteProperties, pasteSelection } from './clipboard'
-import { NOTIFY, SHOW_CONTEXT_MENU, WRITE_EXPORT, toContextEntries, type ContextMenuEntry } from './context'
+import { NOTIFY, RESOLVE_DROP_FILES, SHOW_CONTEXT_MENU, WRITE_EXPORT, toContextEntries, type ContextMenuEntry } from './context'
+import { placeDroppedFiles } from './drop'
 import { deletePageWithUndo, movePageWithUndo, renamePageWithUndo } from './pages'
 import { createAppShortcuts } from './shortcuts'
 import {
@@ -47,6 +48,7 @@ const showRulers = computed(() => (props.editor.state as typeof props.editor.sta
 const showContextMenu = inject(SHOW_CONTEXT_MENU, null)
 const notify = inject(NOTIFY, null)
 const writeExport = inject(WRITE_EXPORT, null)
+const resolveDropFiles = inject(RESOLVE_DROP_FILES, null)
 const { canvasMenu } = useMenuModel()
 const { commands: editorCommands, runCommand: runSdkCommand } = useEditorCommands()
 const typography = useTypography()
@@ -313,7 +315,27 @@ function runCommand(id: string): void {
   }
 }
 
-defineExpose({ canRunCommand, runCommand })
+async function onCanvasDrop(event: DragEvent) {
+  const el = event.currentTarget as HTMLElement | null
+  const rect = el?.getBoundingClientRect()
+  if (!rect) return
+  const pos = props.editor.screenToCanvas(event.clientX - rect.left, event.clientY - rect.top)
+  let files = Array.from(event.dataTransfer?.files ?? [])
+  if (files.length === 0 && resolveDropFiles && event.dataTransfer) {
+    files = (await resolveDropFiles(event.dataTransfer)) ?? []
+  }
+  if (files.length === 0) return
+  await placeDroppedFiles(props.editor, files, pos.x, pos.y, notify)
+}
+
+function placeFiles(files: File[], cx?: number, cy?: number): Promise<boolean> {
+  if (cx !== undefined && cy !== undefined) return placeDroppedFiles(props.editor, files, cx, cy, notify)
+  const vp = props.editor.getViewportSize()
+  const center = props.editor.screenToCanvas(vp.width / 2, vp.height / 2)
+  return placeDroppedFiles(props.editor, files, center.x, center.y, notify)
+}
+
+defineExpose({ canRunCommand, runCommand, placeFiles })
 </script>
 
 <template>
@@ -456,7 +478,12 @@ defineExpose({ canRunCommand, runCommand })
 
     <main class="op-canvas">
       <CanvasRoot :key="showRulers ? 'rulers' : 'no-rulers'" :show-rulers="showRulers" @ready="onReady" @failed="onFailed">
-        <CanvasSurface class="op-surface" @contextmenu.prevent="onCanvasContextMenu" />
+        <CanvasSurface
+          class="op-surface"
+          @contextmenu.prevent="onCanvasContextMenu"
+          @dragover.prevent="($event.dataTransfer && ($event.dataTransfer.dropEffect = 'copy'))"
+          @drop.prevent="onCanvasDrop"
+        />
       </CanvasRoot>
 
       <button v-if="!sidebarOpen" class="op-icon-btn op-sidebar-toggle" title="Show sidebar" @click="sidebarOpen = true">

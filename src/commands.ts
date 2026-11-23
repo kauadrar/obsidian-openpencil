@@ -80,4 +80,5 @@ export const PLUGIN_COMMANDS: readonly PluginCommandDef[] = [
   { id: 'app.copyAsSVG', name: 'Copy as SVG' },
   { id: 'app.copyAsPNG', name: 'Copy as PNG' },
   { id: 'app.exportSelection', name: 'Export selection' },
+  { id: 'app.place', name: 'Place…' },
 ]

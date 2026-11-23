@@ -28,6 +28,11 @@ export type Notify = (message: string) => void
 
 export const NOTIFY: InjectionKey<Notify> = Symbol('openpencil-notify')
 
+/** Resolves Obsidian-internal drags (e.g. from the File Explorer) into File objects. */
+export type ResolveDropFiles = (dataTransfer: DataTransfer) => Promise<File[] | null>
+
+export const RESOLVE_DROP_FILES: InjectionKey<ResolveDropFiles> = Symbol('openpencil-resolve-drop-files')
+
 export function toContextEntries(entries: readonly MenuEntry[]): ContextMenuEntry[] {
   return entries.map((entry) =>
     entry.separator

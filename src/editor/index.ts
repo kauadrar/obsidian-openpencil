@@ -8,15 +8,17 @@ import '@open-pencil/core/runtime-assets/install'
 import { createApp, defineComponent, h, provide, reactive, ref, type App as VueApp } from 'vue'
 import {
   NOTIFY,
+  RESOLVE_DROP_FILES,
   SHOW_CONTEXT_MENU,
   WRITE_EXPORT,
   type ContextMenuEntry,
   type Notify,
+  type ResolveDropFiles,
   type ShowContextMenu,
   type WriteExport,
 } from './context'
 
-export type { ContextMenuEntry, Notify, ShowContextMenu, WriteExport }
+export type { ContextMenuEntry, Notify, ResolveDropFiles, ShowContextMenu, WriteExport }
 import { createDefaultEditorState, createDocumentGraph, createEditor, type Editor, type Tool } from '@open-pencil/core'
 import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
 import { setPageBackgrounds } from '@open-pencil/core/figma-api'
@@ -61,6 +63,8 @@ export interface MountOptions {
   showContextMenu?: ShowContextMenu
   /** Shows a brief user notice (Obsidian's Notice). */
   notify?: Notify
+  /** Resolves vault drags (e.g. from Obsidian's file explorer) into File objects. */
+  resolveDropFiles?: ResolveDropFiles
 }
 
 export interface MountedEditor {
@@ -75,6 +79,7 @@ export interface MountedEditor {
   exportFig(documentName?: string): Promise<Uint8Array>
   canRunCommand(id: string): boolean
   runCommand(id: string): void
+  placeFiles(files: File[], cx?: number, cy?: number): Promise<boolean>
   destroy(): void
 }
 
@@ -181,7 +186,11 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
     if (change !== 'clear') opts.onChange()
   })
 
-  const shellRef = ref<{ canRunCommand(id: string): boolean; runCommand(id: string): void } | null>(null)
+  const shellRef = ref<{
+    canRunCommand(id: string): boolean
+    runCommand(id: string): void
+    placeFiles(files: File[], cx?: number, cy?: number): Promise<boolean>
+  } | null>(null)
 
   // provideEditor must sit in a parent of the components that call useEditor(), since Vue's
   // inject() does not see a component's own provides.
@@ -191,6 +200,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
       if (opts.writeExport) provide(WRITE_EXPORT, opts.writeExport)
       if (opts.showContextMenu) provide(SHOW_CONTEXT_MENU, opts.showContextMenu)
       if (opts.notify) provide(NOTIFY, opts.notify)
+      if (opts.resolveDropFiles) provide(RESOLVE_DROP_FILES, opts.resolveDropFiles)
       return () =>
         h(Shell, {
           ref: shellRef,
@@ -228,6 +238,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
     exportFig,
     canRunCommand: (id) => shellRef.value?.canRunCommand(id) ?? false,
     runCommand: (id) => shellRef.value?.runCommand(id),
+    placeFiles: (files, cx, cy) => shellRef.value?.placeFiles(files, cx, cy) ?? Promise.resolve(false),
     destroy() {
       offHistory()
       themeObserver.disconnect()

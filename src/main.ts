@@ -1,7 +1,9 @@
 // The Obsidian side: registers a view for .fig/.pen files and loads the ES-module editor bundle
 // (editor/editor.js) on first use, unpacking it from main.js into the plugin folder if needed.
 import {
+  App,
   FileView,
+  FuzzySuggestModal,
   Menu,
   MenuItem,
   Notice,
@@ -47,7 +49,12 @@ export default class OpenPencilPlugin extends Plugin {
         name: cmd.name,
         checkCallback: (checking) => {
           const view = this.app.workspace.getActiveViewOfType(DesignView)
-          if (!view?.isFigActive() || !view.canRunCommand(cmd.id)) return false
+          if (!view?.isFigActive()) return false
+          if (cmd.id === 'app.place') {
+            if (!checking) new PlaceFileModal(this.app, (file) => void view.placeVaultFile(file)).open()
+            return true
+          }
+          if (!view.canRunCommand(cmd.id)) return false
           if (!checking) view.runCommand(cmd.id)
           return true
         },
@@ -123,6 +130,35 @@ class DesignView extends FileView {
   runCommand(id: string): void {
     this.mounted?.runCommand(id)
   }
+  async placeVaultFile(file: TFile): Promise<void> {
+    if (!this.mounted) return
+    const bytes = await this.app.vault.readBinary(file)
+    await this.mounted.placeFiles([toDroppedFile(file, bytes)])
+  }
+  private async resolveDropFiles(dt: DataTransfer): Promise<File[] | null> {
+    const draggable = (this.app as unknown as { dragManager?: { draggable?: { type?: string; file?: unknown } } }).dragManager?.draggable
+    if (draggable?.type === 'file' && draggable.file instanceof TFile) {
+      const bytes = await this.app.vault.readBinary(draggable.file)
+      return [toDroppedFile(draggable.file, bytes)]
+    }
+    const raw = dt.getData('text/plain')?.trim()
+    if (!raw) return null
+    let targetPath: string | null = null
+    if (raw.startsWith('obsidian://')) {
+      try {
+        targetPath = new URL(raw).searchParams.get('file')
+      } catch {
+        targetPath = null
+      }
+    } else if (raw.startsWith('[[') && raw.endsWith(']]')) {
+      targetPath = raw.slice(2, -2).split('|')[0]?.trim() ?? null
+    }
+    if (!targetPath) return null
+    const abstract = this.app.vault.getAbstractFileByPath(targetPath) ?? this.app.metadataCache.getFirstLinkpathDest(targetPath, '')
+    if (!(abstract instanceof TFile)) return null
+    const bytes = await this.app.vault.readBinary(abstract)
+    return [toDroppedFile(abstract, bytes)]
+  }
   canAcceptExtension(extension: string) {
     return (EXTENSIONS as readonly string[]).includes(extension)
   }
@@ -164,6 +200,7 @@ class DesignView extends FileView {
         writeExport: (name, bytes) => this.writeExport(file, name, bytes),
         showContextMenu: (entries, pos) => this.showContextMenu(entries, pos),
         notify: (msg) => new Notice(msg),
+        resolveDropFiles: (dt) => this.resolveDropFiles(dt),
       })
       this.mounted.setActive(this.app.workspace.getActiveViewOfType(DesignView) === this)
     } catch (e) {
@@ -308,6 +345,37 @@ class DesignView extends FileView {
     this.mounted = null
     this.host = null
     this.contentEl.empty()
+  }
+}
+
+const PLACEABLE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif', 'svg'])
+const MIME_BY_EXT: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  avif: 'image/avif',
+  svg: 'image/svg+xml',
+}
+
+function toDroppedFile(file: TFile, bytes: ArrayBuffer): File {
+  return new File([bytes], file.name, { type: MIME_BY_EXT[file.extension.toLowerCase()] ?? 'application/octet-stream' })
+}
+
+class PlaceFileModal extends FuzzySuggestModal<TFile> {
+  constructor(app: App, private onPick: (file: TFile) => void) {
+    super(app)
+    this.setPlaceholder('Place image or SVG from vault…')
+  }
+  getItems(): TFile[] {
+    return this.app.vault.getFiles().filter((f) => PLACEABLE_EXTENSIONS.has(f.extension.toLowerCase()))
+  }
+  getItemText(file: TFile): string {
+    return file.path
+  }
+  onChooseItem(file: TFile): void {
+    this.onPick(file)
   }
 }
 
