@@ -39,6 +39,7 @@ const props = defineProps<{
   active: Ref<boolean>
   zoomSpeed: Ref<number>
   readOnly: boolean
+  previewOnly?: boolean
   fileName: string
 }>()
 const emit = defineEmits<{ save: [] }>()
@@ -69,10 +70,12 @@ const CanvasInputBridge = defineComponent({
 })
 
 useEditorKeyboard({
-  active: () => props.active.value,
+  active: () => !props.previewOnly && props.active.value,
   shortcuts: createAppShortcuts(props.editor, () => emit('save')),
 })
-const showRulers = computed(() => (props.editor.state as typeof props.editor.state & { showRulers?: boolean }).showRulers !== false)
+const showRulers = computed(
+  () => !props.previewOnly && (props.editor.state as typeof props.editor.state & { showRulers?: boolean }).showRulers !== false,
+)
 
 const showContextMenu = inject(SHOW_CONTEXT_MENU, null)
 const notify = inject(NOTIFY, null)
@@ -266,6 +269,77 @@ function onFailed(e: unknown) {
   console.error('[openpencil] canvas failed', e)
 }
 
+let previewTouchLast: { x: number; y: number } | null = null
+let previewPinchDist = 0
+let previewLastTapAt = 0
+let previewLastTapPos: { x: number; y: number } | null = null
+
+function touchDistance(a: Touch, b: Touch): number {
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+}
+
+function onPreviewTouchStart(e: TouchEvent) {
+  if (!props.previewOnly) return
+  if (e.touches.length === 1) {
+    const t = e.touches[0]
+    previewTouchLast = { x: t.clientX, y: t.clientY }
+    previewPinchDist = 0
+    const now = Date.now()
+    if (
+      previewLastTapPos &&
+      now - previewLastTapAt < 300 &&
+      Math.hypot(t.clientX - previewLastTapPos.x, t.clientY - previewLastTapPos.y) < 24
+    ) {
+      props.editor.zoomToFit()
+      previewLastTapAt = 0
+      previewLastTapPos = null
+    } else {
+      previewLastTapAt = now
+      previewLastTapPos = { x: t.clientX, y: t.clientY }
+    }
+  } else if (e.touches.length === 2) {
+    previewTouchLast = null
+    previewPinchDist = touchDistance(e.touches[0], e.touches[1])
+  }
+}
+
+function onPreviewTouchMove(e: TouchEvent) {
+  if (!props.previewOnly) return
+  if (e.touches.length === 1 && previewTouchLast) {
+    const t = e.touches[0]
+    props.editor.state.panX += t.clientX - previewTouchLast.x
+    props.editor.state.panY += t.clientY - previewTouchLast.y
+    previewTouchLast = { x: t.clientX, y: t.clientY }
+    props.editor.requestRender()
+  } else if (e.touches.length === 2) {
+    const dist = touchDistance(e.touches[0], e.touches[1])
+    if (previewPinchDist > 0 && dist > 0) {
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+      const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left
+      const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top
+      const oldZoom = props.editor.state.zoom
+      const newZoom = Math.min(64, Math.max(0.02, oldZoom * (dist / previewPinchDist)))
+      const scale = newZoom / oldZoom
+      props.editor.state.panX = cx - (cx - props.editor.state.panX) * scale
+      props.editor.state.panY = cy - (cy - props.editor.state.panY) * scale
+      props.editor.state.zoom = newZoom
+      props.editor.requestRender()
+    }
+    previewPinchDist = dist
+  }
+}
+
+function onPreviewTouchEnd(e: TouchEvent) {
+  if (!props.previewOnly) return
+  if (e.touches.length === 1) {
+    previewTouchLast = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    previewPinchDist = 0
+  } else if (e.touches.length === 0) {
+    previewTouchLast = null
+    previewPinchDist = 0
+  }
+}
+
 const layerRename = useInlineRename((nodeId, name) => {
   props.editor.updateNodeWithUndo(nodeId, { name }, 'Rename layer')
 })
@@ -370,8 +444,8 @@ defineExpose({ canRunCommand, runCommand, placeFiles })
 </script>
 
 <template>
-  <div class="op-shell" :class="{ 'is-collapsed': !sidebarOpen }">
-    <aside v-if="sidebarOpen" class="op-sidebar">
+  <div class="op-shell" :class="{ 'is-collapsed': !sidebarOpen || previewOnly }">
+    <aside v-if="!previewOnly && sidebarOpen" class="op-sidebar">
       <header class="op-doc">
         <span class="op-doc-name" :title="fileName">{{ fileName }}</span>
         <button class="op-icon-btn" title="Hide sidebar" @click="sidebarOpen = false">
@@ -514,17 +588,21 @@ defineExpose({ canRunCommand, runCommand, placeFiles })
           @contextmenu.prevent="onCanvasContextMenu"
           @dragover.prevent="($event.dataTransfer && ($event.dataTransfer.dropEffect = 'copy'))"
           @drop.prevent="onCanvasDrop"
+          @touchstart.passive="onPreviewTouchStart"
+          @touchmove.prevent="onPreviewTouchMove"
+          @touchend="onPreviewTouchEnd"
         />
-        <CanvasInputBridge />
+        <CanvasInputBridge v-if="!previewOnly" />
       </CanvasRoot>
 
-      <button v-if="!sidebarOpen" class="op-icon-btn op-sidebar-toggle" title="Show sidebar" @click="sidebarOpen = true">
+      <button v-if="!previewOnly && !sidebarOpen" class="op-icon-btn op-sidebar-toggle" title="Show sidebar" @click="sidebarOpen = true">
         <svg class="op-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25">
           <rect x="2" y="2.5" width="12" height="11" rx="1.5" /><path d="M6 2.5v11" />
         </svg>
       </button>
 
       <ToolbarRoot
+        v-if="!previewOnly"
         :tools="designTools"
         v-slot="{ tools, activeTool, flyoutSelections, expandedFlyout, actions }"
       >
@@ -568,7 +646,7 @@ defineExpose({ canRunCommand, runCommand, placeFiles })
       <button class="op-zoom" title="Zoom" @click="zoomMenuOpen = !zoomMenuOpen">{{ Math.round(editor.state.zoom * 100) }}%</button>
       <ZoomMenu v-if="zoomMenuOpen" :editor="editor" @close="zoomMenuOpen = false" />
 
-      <div v-if="readOnly" class="op-banner">
+      <div v-if="readOnly && !previewOnly" class="op-banner">
         OpenPencil can't write this file format. Run “Save as .fig” to keep your edits.
       </div>
       <div v-if="status === 'loading'" class="op-overlay">Starting OpenPencil…</div>
@@ -577,6 +655,6 @@ defineExpose({ canRunCommand, runCommand, placeFiles })
       </div>
     </main>
 
-    <DesignPanel />
+    <DesignPanel v-if="!previewOnly" />
   </div>
 </template>

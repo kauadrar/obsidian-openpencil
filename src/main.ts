@@ -537,8 +537,13 @@ class DesignView extends FileView {
         fileName: file.name,
         extension: file.extension as EditorModule.DesignExtension,
         readAsset: (rel) => this.readSibling(file, rel),
-        onChange: () => this.markDirty(),
-        onSaveRequest: () => void this.save(),
+        onChange: () => {
+          if (!Platform.isMobile) this.markDirty()
+        },
+        onSaveRequest: () => {
+          if (!Platform.isMobile) void this.save()
+        },
+        previewOnly: Platform.isMobile,
         writeExport: (name, bytes) => this.writeExport(file, name, bytes),
         showContextMenu: (entries, pos) => this.showContextMenu(entries, pos),
         notify: (msg) => new Notice(msg),
@@ -569,6 +574,7 @@ class DesignView extends FileView {
   }
 
   private markDirty() {
+    if (Platform.isMobile) return
     if (!this.mounted?.canWrite) return // OpenPencil cannot write this format back
     this.dirty = true
     if (this.saveTimer !== null) window.clearTimeout(this.saveTimer)
@@ -583,6 +589,7 @@ class DesignView extends FileView {
   }
 
   async save(): Promise<void> {
+    if (Platform.isMobile) return
     const file = this.file
     const mounted = this.mounted
     if (!file || !mounted) return

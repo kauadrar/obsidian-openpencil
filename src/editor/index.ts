@@ -76,6 +76,8 @@ export interface MountOptions {
   pickImage?: PickImage
   /** Initial plugin preferences (snapping and zoom speed). */
   initialSettings?: OpenPencilSettings
+  /** Read-only full-bleed preview mode (mobile). */
+  previewOnly?: boolean
 }
 
 export interface MountedEditor {
@@ -228,6 +230,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
           active,
           zoomSpeed,
           readOnly: !canWrite,
+          previewOnly: Boolean(opts.previewOnly),
           fileName: opts.fileName.replace(/\.[^.]+$/, ''),
           onSave: () => opts.onSaveRequest(),
         })
