@@ -81,7 +81,13 @@ function toggleDesignIssues() {
       if (SEVERITY_RANK[msg.severity] > SEVERITY_RANK[existing.severity]) existing.severity = msg.severity
     }
   }
-  props.editor.setDesignIssueMarkers([...byNode.values()])
+  const markers = [...byNode.values()]
+  if (markers.length > 0) {
+    props.editor.setDesignIssueMarkers(markers)
+  } else {
+    props.editor.state.designIssues = { markers: [], highlight: null, hoveredMarkerKey: null }
+    props.editor.requestRepaint()
+  }
 }
 
 const actions = [

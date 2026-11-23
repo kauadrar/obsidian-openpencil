@@ -365,6 +365,46 @@ try {
       const labels = (window.smokeLastMenu?.entries ?? []).filter((e) => !e.separator).map((e) => e.label)
       return labels.includes('Tidy up') && labels.includes('Auto arrange')
     }))
+
+    // Spec 09: zoom menu.
+    await page.click('.op-zoom')
+    await page.waitForSelector('.op-zoom-menu')
+    const zoomItems = await page.evaluate(() => [...document.querySelectorAll('.op-zoom-menu .op-zoom-item')].map((el) => el.textContent?.trim() ?? ''))
+    check('Zoom menu lists presets and toggles without Multiplayer or Comments',
+      zoomItems.some((t) => t.includes('Zoom in')) &&
+      zoomItems.some((t) => t.includes('Zoom to 50%')) &&
+      zoomItems.some((t) => t.includes('Snap to pixel grid')) &&
+      zoomItems.some((t) => t.includes('Design issues')) &&
+      !zoomItems.some((t) => t.includes('Multiplayer') || t.includes('Comments')))
+
+    await page.fill('.op-zoom-input', '1')
+    await page.keyboard.press('Enter')
+    check('Zoom input clamps below minimum to 2%', await page.evaluate(() => Math.round(window.smokeEditor.state.zoom * 100) === 2))
+
+    await page.click('.op-zoom')
+    await page.locator('.op-zoom-item', { hasText: 'Zoom to 50%' }).click()
+    check('Zoom to 50% sets zoom to 50%', await page.evaluate(() => Math.round(window.smokeEditor.state.zoom * 100) === 50))
+
+    await page.click('.op-zoom')
+    const snapCheckedBefore = await page.locator('.op-zoom-item', { hasText: 'Snap to pixel grid' }).getAttribute('aria-checked')
+    await page.keyboard.press('Escape')
+    await page.keyboard.press(`${mod}+Shift+'`)
+    await page.click('.op-zoom')
+    const snapCheckedAfter = await page.locator('.op-zoom-item', { hasText: 'Snap to pixel grid' }).getAttribute('aria-checked')
+    check("Mod+Shift+' toggles Snap to pixel grid checkmark in zoom menu", snapCheckedBefore !== snapCheckedAfter)
+
+    await page.locator('.op-zoom-item', { hasText: 'Rulers' }).click()
+    const rulersOff = await page.evaluate(() => window.smokeEditor.state.showRulers === false)
+    await page.locator('.op-zoom-item', { hasText: 'Rulers' }).click()
+    const rulersOn = await page.evaluate(() => window.smokeEditor.state.showRulers === true)
+    check('Rulers toggle in zoom menu flips showRulers off and on', rulersOff && rulersOn)
+
+    await page.locator('.op-zoom-item', { hasText: 'Design issues' }).click()
+    const issuesOn = await page.evaluate(() => window.smokeEditor.state.designIssues !== null)
+    await page.locator('.op-zoom-item', { hasText: 'Design issues' }).click()
+    const issuesOff = await page.evaluate(() => window.smokeEditor.state.designIssues === null)
+    check('Design issues toggle sets and clears designIssues', issuesOn && issuesOff)
+    await page.keyboard.press('Escape')
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
