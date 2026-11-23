@@ -292,18 +292,21 @@ class DesignView extends FileView {
     return this.saving
   }
 
-  /** Writes an exported image next to the design, numbering the name when it is taken. */
+  /** Writes an exported image next to the design, overwriting an existing file of the same name. */
   async writeExport(file: TFile, name: string, bytes: Uint8Array): Promise<string> {
     const base = file.parent?.path ?? ''
-    const dot = name.lastIndexOf('.')
-    const stem = dot > 0 ? name.slice(0, dot) : name
-    const ext = dot > 0 ? name.slice(dot) : ''
-    let path = normalizePath(`${base}/${name}`)
-    for (let i = 1; this.app.vault.getAbstractFileByPath(path); i++) {
-      path = normalizePath(`${base}/${stem} ${i}${ext}`)
+    const path = base ? normalizePath(`${base}/${name}`) : normalizePath(name)
+    const existing = this.app.vault.getAbstractFileByPath(path)
+    if (existing instanceof TFile) {
+      await this.app.vault.modifyBinary(existing, toArrayBuffer(bytes))
+      new Notice(`Replaced ${existing.path}`)
+      return existing.path
+    }
+    if (existing) {
+      throw new Error(`Cannot overwrite non-file at ${path}`)
     }
     const created = await this.app.vault.createBinary(path, toArrayBuffer(bytes))
-    new Notice(`Exported ${created.name}`)
+    new Notice(`Exported ${created.path}`)
     return created.path
   }
 

@@ -4,6 +4,7 @@ import { pngFormat } from '@open-pencil/core/io'
 import { exportBounds, MAX_RASTER_PIXELS, oversizedRaster, rasterSize } from '@open-pencil/core/io/formats/raster'
 import type { Vector } from '@open-pencil/scene-graph/primitives'
 import type { Notify, WriteExport } from './context'
+import { buildExportFileName } from './export-name'
 
 let lastCopied: ClipboardSnapshot | null = null
 let lastProperties: ClipboardSnapshot | null = null
@@ -150,25 +151,40 @@ export async function copySelectionAsPNG(editor: Editor, notify?: Notify): Promi
 }
 
 /** Exports the selected layers as a 1x PNG using the host writer (or browser download). */
-export async function exportSelection(editor: Editor, writeExport?: WriteExport | null, notify?: Notify | null): Promise<void> {
+export async function exportSelection(
+  editor: Editor,
+  designName = 'Design',
+  writeExport?: WriteExport | null,
+  notify?: Notify | null,
+): Promise<void> {
   const ids = [...editor.state.selectedIds]
   if (ids.length === 0) return
-  const target = ids.length === 1 ? { scope: 'node' as const, nodeId: ids[0]! } : { scope: 'selection' as const, nodeIds: ids }
-  const result = await pngFormat.exportContent!(
-    { graph: editor.graph, target },
-    { scale: 1 },
-    { canvasKit: await getCanvasKit(), renderer: editor.renderer ?? undefined },
-  )
-  const data = typeof result.data === 'string' ? new TextEncoder().encode(result.data) : result.data
-  const rawName = ids.length === 1 ? (editor.graph.getNode(ids[0]!)?.name ?? 'Export') : 'Selection'
-  const fileName = `${rawName.replace(/[\\/:*?"<>|#^[\]]/g, '-').trim() || 'Export'}.png`
-  if (writeExport) {
-    await writeExport(fileName, data)
-    return
+  try {
+    const target = ids.length === 1 ? { scope: 'node' as const, nodeId: ids[0]! } : { scope: 'selection' as const, nodeIds: ids }
+    const result = await pngFormat.exportContent!(
+      { graph: editor.graph, target },
+      { scale: 1 },
+      { canvasKit: await getCanvasKit(), renderer: editor.renderer ?? undefined },
+    )
+    const data = typeof result.data === 'string' ? new TextEncoder().encode(result.data) : result.data
+    const rawName = ids.length === 1 ? (editor.graph.getNode(ids[0]!)?.name ?? 'Export') : 'Selection'
+    const fileName = buildExportFileName(editor, {
+      designName,
+      targetName: rawName,
+      nodeId: ids.length === 1 ? ids[0] : undefined,
+      extension: result.extension,
+    })
+    if (writeExport) {
+      await writeExport(fileName, data)
+      return
+    }
+    const url = URL.createObjectURL(new Blob([data as BlobPart], { type: result.mimeType }))
+    const a = Object.assign(document.createElement('a'), { href: url, download: fileName })
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    notify?.(`Exported ${fileName}`)
+  } catch (e) {
+    notify?.(`Export failed: ${e instanceof Error ? e.message : String(e)}`)
+    console.error('[openpencil] export failed', e)
   }
-  const url = URL.createObjectURL(new Blob([data as BlobPart], { type: result.mimeType }))
-  const a = Object.assign(document.createElement('a'), { href: url, download: fileName })
-  a.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-  notify?.(`Exported ${fileName}`)
 }

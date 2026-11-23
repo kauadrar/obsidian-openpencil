@@ -8,10 +8,13 @@ import type { ExportSetting } from '@open-pencil/scene-graph'
 import { jpgFormat, pngFormat, svgFormat, webpFormat, type ExportTarget, type IOFormatAdapter } from '@open-pencil/core/io'
 import { getCanvasKit } from '@open-pencil/core/canvaskit'
 import { useExport } from '@open-pencil/vue/document/export'
-import { WRITE_EXPORT, type WriteExport } from './context'
+import { DESIGN_NAME, NOTIFY, WRITE_EXPORT, type WriteExport } from './context'
+import { buildExportFileName } from './export-name'
 
 const ex = useExport()
 const writeExport = inject(WRITE_EXPORT, null)
+const notify = inject(NOTIFY, null)
+const designName = inject(DESIGN_NAME, 'Design')
 
 /** The formats the plugin can write; OpenPencil's PDF, PPTX and draw.io need the desktop app. */
 const ADAPTERS: Record<string, IOFormatAdapter> = { png: pngFormat, jpg: jpgFormat, webp: webpFormat, svg: svgFormat }
@@ -24,9 +27,16 @@ const status = ref('')
 const scaleLabel = (s: number) => `${s}x`
 
 function fileName(setting: ExportSetting, ext: string) {
-  const base = (ex.activeName.value || 'Export').replace(/[\\/:*?"<>|#^[\]]/g, '-').trim()
-  const scale = ex.formatSupportsScale(setting.format) && setting.scale !== 1 ? `@${setting.scale}x` : ''
-  return `${base}${setting.suffix ?? ''}${scale}.${ext}`
+  const ids = ex.targetIds.value
+  const nodeId = ex.activeTarget.value !== 'page' && ids.length === 1 ? ids[0] : undefined
+  return buildExportFileName(ex.editor, {
+    designName,
+    targetName: ex.activeName.value || 'Export',
+    nodeId,
+    suffix: setting.suffix,
+    scale: ex.formatSupportsScale(setting.format) ? setting.scale : 1,
+    extension: ext,
+  })
 }
 
 function target(): ExportTarget {
@@ -67,7 +77,9 @@ async function runExport() {
     }
     status.value = written.length === 1 ? `Exported ${written[0]}` : `Exported ${written.length} files`
   } catch (e) {
-    status.value = `Export failed: ${e instanceof Error ? e.message : String(e)}`
+    const msg = `Export failed: ${e instanceof Error ? e.message : String(e)}`
+    status.value = msg
+    notify?.(msg)
     console.error('[openpencil] export failed', e)
   } finally {
     busy.value = false

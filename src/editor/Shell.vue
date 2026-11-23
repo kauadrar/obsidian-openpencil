@@ -2,7 +2,7 @@
 // The editor shell, laid out like OpenPencil's own window: a sidebar with pages and layers,
 // the canvas with rulers, and a floating icon toolbar. Built from @open-pencil/vue's unstyled
 // primitives; the look lives in styles.css under .op-shell.
-import { computed, defineComponent, h, inject, ref, watchEffect, type Ref } from 'vue'
+import { computed, defineComponent, h, inject, provide, ref, watchEffect, type Ref } from 'vue'
 import { EDITOR_TOOLS, type Editor, type Tool } from '@open-pencil/core'
 import { CanvasRoot, CanvasSurface, useCanvasContext, useCanvasInput } from '@open-pencil/vue/canvas'
 import { useTextEdit } from '@open-pencil/vue/canvas/text-edit'
@@ -18,7 +18,7 @@ import { useMenuModel, type MenuEntry } from '@open-pencil/vue/editor/menu-model
 import DesignPanel from './DesignPanel.vue'
 import ZoomMenu from './ZoomMenu.vue'
 import { copySelection, copySelectionAsPNG, copySelectionAsSVG, cutSelection, exportSelection, pasteProperties, pasteSelection } from './clipboard'
-import { NOTIFY, RESOLVE_DROP_FILES, SHOW_CONTEXT_MENU, WRITE_EXPORT, toContextEntries, type ContextMenuEntry } from './context'
+import { DESIGN_NAME, NOTIFY, RESOLVE_DROP_FILES, SHOW_CONTEXT_MENU, WRITE_EXPORT, toContextEntries, type ContextMenuEntry } from './context'
 import { placeDroppedFiles } from './drop'
 import { deletePageWithUndo, movePageWithUndo, renamePageWithUndo } from './pages'
 import { createAppShortcuts } from './shortcuts'
@@ -77,6 +77,8 @@ const showContextMenu = inject(SHOW_CONTEXT_MENU, null)
 const notify = inject(NOTIFY, null)
 const writeExport = inject(WRITE_EXPORT, null)
 const resolveDropFiles = inject(RESOLVE_DROP_FILES, null)
+const designName = props.fileName.replace(/\.[^.]+$/, '')
+provide(DESIGN_NAME, designName)
 const { canvasMenu } = useMenuModel()
 const { commands: editorCommands, runCommand: runSdkCommand } = useEditorCommands()
 const typography = useTypography()
@@ -338,7 +340,7 @@ function runCommand(id: string): void {
       void copySelectionAsPNG(props.editor, notify ?? undefined)
       break
     case 'app.exportSelection':
-      void exportSelection(props.editor, writeExport, notify)
+      void exportSelection(props.editor, designName, writeExport, notify)
       break
   }
 }

@@ -28,6 +28,8 @@ export type Notify = (message: string) => void
 
 export const NOTIFY: InjectionKey<Notify> = Symbol('openpencil-notify')
 
+export const DESIGN_NAME: InjectionKey<string> = Symbol('openpencil-design-name')
+
 /** Resolves Obsidian-internal drags (e.g. from the File Explorer) into File objects. */
 export type ResolveDropFiles = (dataTransfer: DataTransfer) => Promise<File[] | null>
 
