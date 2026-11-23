@@ -68,13 +68,14 @@ const localFontAccess = {
   load: async (): Promise<FontFamilyOption[]> => {
     if (typeof window === 'undefined' || !('queryLocalFonts' in window)) {
       localFontState = 'unsupported'
-      return []
+      return [...BUNDLED_FONTS]
     }
     try {
       const fonts = await (window as unknown as { queryLocalFonts: () => Promise<Array<{ family: string }>> }).queryLocalFonts()
       localFontState = 'granted'
-      const seen = new Set<string>()
-      const result: FontFamilyOption[] = []
+      // The picker replaces its list with this result, so the bundled fonts are kept first.
+      const seen = new Set<string>(BUNDLED_FONTS.map((f) => f.family))
+      const result: FontFamilyOption[] = [...BUNDLED_FONTS]
       for (const f of fonts) {
         if (!seen.has(f.family)) {
           seen.add(f.family)
@@ -84,7 +85,7 @@ const localFontAccess = {
       return result
     } catch {
       localFontState = 'denied'
-      return []
+      return [...BUNDLED_FONTS]
     }
   },
 }
@@ -395,6 +396,7 @@ const {
 } = useFontPicker({
   modelValue: fontFamily,
   listFamilies: listFontFamilies,
+  localFontAccess,
 })
 watch(
   () => (isText.value ? merged('fontFamily') : ''),
