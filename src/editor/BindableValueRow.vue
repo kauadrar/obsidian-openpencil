@@ -3,6 +3,7 @@
 // "Apply variable" list, and a bound field shows its variable as a pill with a detach button.
 // Without a single target node (nothing or several selected) the field is shown unchanged.
 import { computed } from 'vue'
+import { ComboboxAnchor } from 'reka-ui'
 import type { Color } from '@open-pencil/scene-graph/primitives'
 import { useColorBindingProvider, useNumberBindingProvider } from '@open-pencil/vue/controls/binding-provider'
 import { BindableValuePicker, BindableValueRoot, BindableValueTrigger } from '@open-pencil/vue/primitives/BindableValue'
@@ -33,20 +34,21 @@ const createLabel = (value: unknown) => {
 
 <template>
   <BindableValueRoot v-if="nodeId" :provider="provider as never" :targets="targets" :value="value as never" v-slot="s">
-    <div class="op-bind" :data-state="s.state">
-      <div v-if="s.state === 'bound' && s.variable" class="op-bind-pill" :title="s.variable.name">
-        <span class="op-bind-pill-name">{{ s.variable.name }}</span>
-        <button
-          type="button"
-          class="op-bind-pill-detach"
-          aria-label="Detach variable"
-          title="Detach variable"
-          @click="s.actions.unbind()"
-        >×</button>
-      </div>
-      <slot v-else />
-      <BindableValueTrigger class="op-bind-trigger" aria-label="Apply variable" title="Apply variable">◇</BindableValueTrigger>
-      <BindableValuePicker>
+    <!-- The popover is positioned against this anchor; without it reka parks the list off-screen. -->
+    <BindableValuePicker>
+      <ComboboxAnchor as="div" class="op-bind" :data-state="s.state">
+        <div v-if="s.state === 'bound' && s.variable" class="op-bind-pill" :title="s.variable.name">
+          <span class="op-bind-pill-name">{{ s.variable.name }}</span>
+          <button
+            type="button"
+            class="op-bind-pill-detach"
+            aria-label="Detach variable"
+            title="Detach variable"
+            @click="s.actions.unbind()"
+          >×</button>
+        </div>
+        <slot v-else />
+        <BindableValueTrigger class="op-bind-trigger" aria-label="Apply variable" title="Apply variable">◇</BindableValueTrigger>
         <VariablePopover
           :types="types"
           :search="s.searchTerm"
@@ -54,8 +56,8 @@ const createLabel = (value: unknown) => {
           @search="(term: string) => s.actions.setSearchTerm(term)"
           @create="s.actions.create('')"
         />
-      </BindableValuePicker>
-    </div>
+      </ComboboxAnchor>
+    </BindableValuePicker>
   </BindableValueRoot>
   <slot v-else />
 </template>
