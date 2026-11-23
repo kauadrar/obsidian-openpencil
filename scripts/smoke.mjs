@@ -454,6 +454,32 @@ try {
     await page.keyboard.press('Enter')
     check('app.renameSelection opens layer inline rename and commits',
       await page.evaluate((id) => window.smokeEditor.graph.getNode(id)?.name === 'Cmd Renamed', s8.other))
+
+    // Spec 12: Place / drop SVG, frame targeting, and unsupported file notice.
+    const placeRes = await page.evaluate(async (ids) => {
+      const ed = window.smokeEditor
+      const svgFile = new File(['<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="red"/></svg>'], 'badge.svg', { type: 'image/svg+xml' })
+      const ok = await window.smokeMounted.placeFiles([svgFile])
+      const placedId = [...ed.state.selectedIds][0]
+      const frame = ed.graph.getNode(ids.frame)
+      const okInFrame = await window.smokeMounted.placeFiles([svgFile], frame.x + 100, frame.y + 100)
+      const inFrameNode = ed.getSelectedNode()
+      window.smokeLastNotice = null
+      const badFile = new File(['hello'], 'notes.txt', { type: 'text/plain' })
+      const badOk = await window.smokeMounted.placeFiles([badFile])
+      return {
+        ok,
+        hasPlaced: !!placedId,
+        okInFrame,
+        parentIsFrame: inFrameNode?.parentId === ids.frame,
+        badOk,
+        notice: window.smokeLastNotice,
+      }
+    }, s8)
+    check('placeFiles inserts SVG at viewport center and into frame when dropped on frame',
+      placeRes.ok && placeRes.hasPlaced && placeRes.okInFrame && placeRes.parentIsFrame)
+    check('Unsupported file shows notice and inserts nothing',
+      placeRes.badOk === false && String(placeRes.notice).includes('Unsupported file type'))
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))

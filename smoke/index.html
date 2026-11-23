@@ -39,6 +39,9 @@
         showContextMenu(entries, pos) {
           window.smokeLastMenu = { entries, pos }
         },
+        notify(msg) {
+          window.smokeLastNotice = msg
+        },
       })
       window.smokeEditor = mounted.editor // for poking at the editor by hand from the console
       window.smokeMounted = mounted
