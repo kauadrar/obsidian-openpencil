@@ -1342,20 +1342,35 @@
   position: absolute;
   padding: 0;
   border: 0;
-  background: var(--text-muted, #888);
-  opacity: 0.45;
+  background: transparent;
   cursor: pointer;
 }
-.op-pin.is-active {
+.op-pin::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--text-muted, #888);
+  opacity: 0.45;
+  border-radius: 1px;
+}
+.op-pin.is-active::after {
   background: var(--interactive-accent, #4c8bf5);
   opacity: 1;
 }
-.op-pin-left { left: 4px; top: 50%; width: 10px; height: 4px; transform: translateY(-50%); }
-.op-pin-right { right: 4px; top: 50%; width: 10px; height: 4px; transform: translateY(-50%); }
-.op-pin-top { top: 4px; left: 50%; width: 4px; height: 10px; transform: translateX(-50%); }
-.op-pin-bottom { bottom: 4px; left: 50%; width: 4px; height: 10px; transform: translateX(-50%); }
-.op-pin-h-center { left: 50%; top: 50%; width: 10px; height: 4px; transform: translate(-50%, -50%); }
-.op-pin-v-center { left: 50%; top: 50%; width: 4px; height: 10px; transform: translate(-50%, -50%); }
+.op-pin-left { left: 0; top: 50%; width: 18px; height: 14px; transform: translateY(-50%); }
+.op-pin-left::after { width: 10px; height: 2px; }
+.op-pin-right { right: 0; top: 50%; width: 18px; height: 14px; transform: translateY(-50%); }
+.op-pin-right::after { width: 10px; height: 2px; }
+.op-pin-top { top: 0; left: 50%; width: 14px; height: 18px; transform: translateX(-50%); }
+.op-pin-top::after { width: 2px; height: 10px; }
+.op-pin-bottom { bottom: 0; left: 50%; width: 14px; height: 18px; transform: translateX(-50%); }
+.op-pin-bottom::after { width: 2px; height: 10px; }
+.op-pin-h-center { left: 50%; top: 50%; width: 16px; height: 8px; transform: translate(-50%, -50%); }
+.op-pin-h-center::after { width: 10px; height: 2px; }
+.op-pin-v-center { left: 50%; top: 50%; width: 8px; height: 16px; transform: translate(-50%, -50%); }
+.op-pin-v-center::after { width: 2px; height: 10px; }
 .op-constraints-scale-badge {
   position: absolute;
   right: 2px;
