@@ -406,7 +406,7 @@
 }
 .op-shell .op-zoom {
   position: absolute;
-  left: 12px;
+  left: 28px; /* clear of the 20px vertical ruler */
   bottom: 40px;
   box-sizing: content-box;
   width: 6ch;
