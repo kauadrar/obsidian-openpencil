@@ -6,6 +6,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import type { Editor } from '@open-pencil/core'
 import { useIconSearch } from '@open-pencil/vue/controls/icon'
+import { MATERIAL_SYMBOLS_PREFIXES } from '@open-pencil/core/icons'
 
 const props = defineProps<{ editor: Editor }>()
 
@@ -19,7 +20,16 @@ const previewUrl = (name: string): string | null => {
   return svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : null
 }
 
-const unavailable = computed(() => search.failed.value && search.visible.value.length === 0)
+// Iconify is unreachable when the browser is offline, when the search fails, or when the set list has
+// loaded with only the Material Symbols sets, which the editor draws itself. Then no results are shown.
+const materialPrefixes: readonly string[] = MATERIAL_SYMBOLS_PREFIXES
+const iconifySets = computed(() => search.sets.value.filter((s) => !materialPrefixes.includes(s.prefix)))
+const iconifyUnreachable = computed(
+  () =>
+    search.failed.value ||
+    (!search.setsLoading.value && search.sets.value.length > 0 && iconifySets.value.length === 0),
+)
+const showResults = computed(() => online.value && !iconifyUnreachable.value)
 // Iconify's sets are fetched over the network; the Material Symbols results can still show offline, so the
 // note says what is missing rather than leaving the search looking complete.
 const online = ref(typeof navigator === 'undefined' ? true : navigator.onLine)
@@ -32,7 +42,9 @@ onBeforeUnmount(() => {
   window.removeEventListener('online', setOnline)
   window.removeEventListener('offline', setOnline)
 })
-const empty = computed(() => !search.loading.value && !search.failed.value && search.query.value.trim() !== '' && search.visible.value.length === 0)
+const empty = computed(
+  () => showResults.value && !search.loading.value && search.query.value.trim() !== '' && search.visible.value.length === 0,
+)
 
 watch(open, (isOpen) => {
   if (isOpen) void search.loadSets().catch(() => {})
@@ -99,11 +111,11 @@ async function insert(name: string) {
         </div>
 
         <div v-if="!online" class="op-icon-status">Offline: Iconify icons need an internet connection.</div>
-        <div v-if="search.loading.value || search.setsLoading.value" class="op-icon-status">Searching…</div>
-        <div v-else-if="unavailable" class="op-icon-status">Icons unavailable. Iconify needs an internet connection.</div>
+        <div v-else-if="search.loading.value || search.setsLoading.value" class="op-icon-status">Searching…</div>
+        <div v-else-if="iconifyUnreachable" class="op-icon-status">Icons unavailable. Iconify needs an internet connection.</div>
         <div v-else-if="empty" class="op-icon-status">No icons found</div>
 
-        <div class="op-icon-grid" role="list">
+        <div v-if="showResults" class="op-icon-grid" role="list">
           <button
             v-for="name in search.visible.value"
             :key="name"
@@ -119,7 +131,7 @@ async function insert(name: string) {
           </button>
         </div>
 
-        <button v-if="search.hasMore.value" type="button" class="op-icon-more" :disabled="search.loading.value" @click="search.loadMore()">
+        <button v-if="showResults && search.hasMore.value" type="button" class="op-icon-more" :disabled="search.loading.value" @click="search.loadMore()">
           Load more
         </button>
       </PopoverContent>
