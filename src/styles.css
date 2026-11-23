@@ -1670,3 +1670,125 @@
   min-width: 0;
   max-width: 60%;
 }
+
+/* Left panel tabs (Layers / Assets) */
+.op-shell .op-left-tabs {
+  display: flex;
+  gap: 8px;
+}
+.op-shell .op-left-tab {
+  all: unset;
+  cursor: pointer;
+  color: var(--op-text-muted);
+  font-weight: 600;
+  padding: 2px 0;
+}
+.op-shell .op-left-tab.is-active {
+  color: var(--op-text);
+  box-shadow: inset 0 -2px 0 var(--op-accent);
+}
+
+/* Assets tab */
+.op-shell .op-assets {
+  padding: 4px 8px 8px;
+}
+.op-shell .op-assets-search {
+  box-sizing: border-box;
+  width: 100%;
+  height: 24px;
+  margin-bottom: 6px;
+  padding: 0 6px;
+  font-size: 11px;
+  color: inherit;
+  background: var(--op-hover);
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+.op-shell .op-assets-search:focus {
+  outline: none;
+  border-color: var(--interactive-accent, #7c3aed);
+}
+.op-shell .op-assets-group-head {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 24px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 11px;
+}
+.op-shell .op-assets-twisty {
+  display: inline-block;
+  width: 10px;
+  color: var(--op-text-muted);
+  transition: transform 0.1s;
+}
+.op-shell .op-assets-twisty.is-open {
+  transform: rotate(90deg);
+}
+.op-shell .op-assets-group-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.op-shell .op-assets-list {
+  list-style: none;
+  margin: 0 0 6px;
+  padding: 0;
+}
+.op-shell .op-asset {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: grab;
+}
+.op-shell .op-asset:hover {
+  background: var(--op-hover);
+}
+.op-shell .op-asset-thumb {
+  flex: none;
+  width: 28px;
+  height: 22px;
+  border-radius: 3px;
+  border: 1px solid var(--op-border);
+  background: var(--op-hover);
+}
+.op-shell .op-asset-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.op-shell .op-asset-add {
+  all: unset;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  color: var(--op-text);
+}
+.op-shell .op-asset:hover .op-asset-add,
+.op-shell .op-asset-add:focus-visible {
+  opacity: 1;
+}
+.op-shell .op-asset-add:hover {
+  background: var(--op-hover);
+}
+.op-shell .op-assets-empty {
+  padding: 8px 0;
+}

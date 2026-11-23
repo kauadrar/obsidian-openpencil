@@ -10,6 +10,8 @@ import { toolCursor } from '@open-pencil/vue/editor/tool-cursor'
 import { ToolbarRoot } from '@open-pencil/vue/primitives/Toolbar'
 import { PageListRoot } from '@open-pencil/vue/primitives/PageList'
 import { LayerTreeRoot, LayerTreeItem } from '@open-pencil/vue/primitives/LayerTree'
+import AssetsPanel from './AssetsPanel.vue'
+import { COMPONENT_DRAG_TYPE } from './assets'
 import { formatShortcut, useEditorCommands, type EditorCommandId } from '@open-pencil/vue/editor/commands'
 import { useTypography } from '@open-pencil/vue/controls/typography'
 import { useInlineRename } from '@open-pencil/vue/editor/inline-rename'
@@ -268,6 +270,7 @@ const toolName = (t: Tool) => TOOL_NAMES[t]?.[0] ?? t
 const toolKey = (t: Tool) => TOOL_NAMES[t]?.[1] ?? ''
 
 const sidebarOpen = ref(true)
+const leftTab = ref<'layers' | 'assets'>('layers')
 const zoomMenuOpen = ref(false)
 const status = ref<'loading' | 'ready' | 'failed'>('loading')
 const error = ref('')
@@ -463,6 +466,13 @@ async function onCanvasDrop(event: DragEvent) {
   const rect = el?.getBoundingClientRect()
   if (!rect) return
   const pos = props.editor.screenToCanvas(event.clientX - rect.left, event.clientY - rect.top)
+  // A component dragged from the Assets tab becomes an instance where it is dropped.
+  const componentId = event.dataTransfer?.getData(COMPONENT_DRAG_TYPE)
+  if (componentId) {
+    const instance = props.editor.createInstanceFromComponent(componentId, pos.x, pos.y)
+    if (instance) props.editor.select([instance])
+    return
+  }
   let files = Array.from(event.dataTransfer?.files ?? [])
   if (files.length === 0 && resolveDropFiles && event.dataTransfer) {
     files = (await resolveDropFiles(event.dataTransfer)) ?? []
@@ -545,8 +555,26 @@ defineExpose({ canRunCommand, runCommand, placeFiles })
       </section>
 
       <section class="op-section op-layers">
-        <div class="op-section-head"><span>Layers</span></div>
-        <LayerTreeRoot v-slot="{ visibleRows, expanded, actions: tree }" :indent-per-level="14">
+        <div class="op-section-head op-left-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            class="op-left-tab"
+            :class="{ 'is-active': leftTab === 'layers' }"
+            :aria-selected="leftTab === 'layers'"
+            @click="leftTab = 'layers'"
+          >Layers</button>
+          <button
+            type="button"
+            role="tab"
+            class="op-left-tab"
+            :class="{ 'is-active': leftTab === 'assets' }"
+            :aria-selected="leftTab === 'assets'"
+            @click="leftTab = 'assets'"
+          >Assets</button>
+        </div>
+        <AssetsPanel v-if="leftTab === 'assets'" :editor="editor" />
+        <LayerTreeRoot v-else v-slot="{ visibleRows, expanded, actions: tree }" :indent-per-level="14">
           <div
             class="op-list op-layer-list"
             tabindex="0"
