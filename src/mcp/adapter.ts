@@ -11,7 +11,7 @@ export interface McpDocumentSummary {
 export interface McpHost {
   listDocuments(): McpDocumentSummary[]
   openDocument(path: string): Promise<McpDocumentSummary>
-  closeDocument(path: string): Promise<void>
+  closeDocument(path: string, unsaved?: string): Promise<void>
   activateDocument(path: string): Promise<void>
   createDocument(path: string): Promise<McpDocumentSummary>
   saveDocument(path: string): Promise<void>
@@ -57,7 +57,8 @@ export function createMcpRpcSender(host: McpHost): RPCSender {
 
       case 'close_document': {
         const path = asString(args.path ?? args.document_id ?? args.file, 'path')
-        await host.closeDocument(path)
+        const unsaved = optionalString(args.unsaved)
+        await host.closeDocument(path, unsaved)
         result = { closed: true, path }
         break
       }

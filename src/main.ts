@@ -216,12 +216,19 @@ export default class OpenPencilPlugin extends Plugin {
         await leaf.openFile(file)
         return { path: file.path, name: file.name, open: true, active: true, dirty: false }
       },
-      closeDocument: async (path: string): Promise<void> => {
+      closeDocument: async (path: string, unsaved = 'error'): Promise<void> => {
         const normalized = normalizePath(path)
         let closed = false
         for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
           const view = leaf.view
           if (view instanceof DesignView && view.file?.path === normalized) {
+            if (view.isDirty()) {
+              if (unsaved === 'save') {
+                await view.save()
+              } else if (unsaved !== 'discard') {
+                throw new Error(`Document has unsaved changes: ${normalized}`)
+              }
+            }
             leaf.detach()
             closed = true
           }
@@ -275,13 +282,19 @@ export default class OpenPencilPlugin extends Plugin {
       },
       undo: async (path?: string): Promise<boolean> => {
         const view = path ? findOpenView(path) : this.app.workspace.getActiveViewOfType(DesignView)
-        if (!view || !view.canRunCommand('edit.undo')) return false
+        if (!view) {
+          throw new Error('Document is not open; undo/redo only works in open tabs')
+        }
+        if (!view.canRunCommand('edit.undo')) return false
         view.runCommand('edit.undo')
         return true
       },
       redo: async (path?: string): Promise<boolean> => {
         const view = path ? findOpenView(path) : this.app.workspace.getActiveViewOfType(DesignView)
-        if (!view || !view.canRunCommand('edit.redo')) return false
+        if (!view) {
+          throw new Error('Document is not open; undo/redo only works in open tabs')
+        }
+        if (!view.canRunCommand('edit.redo')) return false
         view.runCommand('edit.redo')
         return true
       },
@@ -329,6 +342,12 @@ export default class OpenPencilPlugin extends Plugin {
           if (findOpenView(normalized)) {
             throw new Error(`Refusing headless write: ${normalized} is open in an Editor tab`)
           }
+          console.debug('[OpenPencil MCP] headless write', {
+            path: normalized,
+            command,
+            bytes: result.updatedBytes.byteLength,
+            timestamp: new Date().toISOString(),
+          })
           await this.app.vault.modifyBinary(file, result.updatedBytes.buffer as ArrayBuffer)
         }
         return result.output
