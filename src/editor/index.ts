@@ -24,9 +24,10 @@ export type { ContextMenuEntry, Notify, PickImage, ResolveDropFiles, ShowContext
 import { createDefaultEditorState, createDocumentGraph, createEditor, type Editor, type Tool } from '@open-pencil/core'
 import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
 import { setPageBackgrounds, FigmaAPI } from '@open-pencil/core/figma-api'
-import { ALL_TOOLS, CODEGEN_PROMPT, type ToolDef } from '@open-pencil/core/tools'
+import { ALL_TOOLS, CODEGEN_PROMPT, toolStandardJSONSchema, type ToolDef } from '@open-pencil/core/tools'
 import type { McpServer } from '@modelcontextprotocol/server'
 import { registerTools, type RPCSender } from '../../node_modules/@open-pencil/mcp/src/tool/registration'
+import * as v from 'valibot'
 import { exportFigFile, parseFigFile, setFigCanvasCompressor } from '@open-pencil/core/io/formats/fig'
 import { buildFigKiwi, loadFigDataCompressor } from '@open-pencil/kiwi/fig/container'
 import { penFormat } from '@open-pencil/core/io'
@@ -304,9 +305,43 @@ export function registerMcpTools(mcpServer: McpServer, sendRPC: RPCSender): void
       allowEval: false,
       scope: 'document',
     },
-    mcpRoot: '/',
     sendRPC,
   })
+
+  const callDocTool = async (command: string, args: Record<string, unknown>) => {
+    const res = (await sendRPC({ command, args })) as { ok?: boolean; result?: unknown; error?: string }
+    if (res.ok === false) {
+      return { content: [{ type: 'text' as const, text: res.error ?? 'Unknown error' }], isError: true }
+    }
+    return { content: [{ type: 'text' as const, text: JSON.stringify(res.result ?? {}) }] }
+  }
+
+  mcpServer.registerTool(
+    'open_document',
+    {
+      description: 'Open a .fig or .pen design file in an Obsidian tab.',
+      inputSchema: toolStandardJSONSchema(v.strictObject({ path: v.string() })),
+    },
+    (args) => callDocTool('open_document', args as Record<string, unknown>),
+  )
+
+  mcpServer.registerTool(
+    'create_document',
+    {
+      description: 'Create a new .fig or .pen design file in the Obsidian vault and open it.',
+      inputSchema: toolStandardJSONSchema(v.strictObject({ path: v.string() })),
+    },
+    (args) => callDocTool('create_document', args as Record<string, unknown>),
+  )
+
+  mcpServer.registerTool(
+    'list_recent_documents',
+    {
+      description: 'List recently opened .fig and .pen design files in the Obsidian vault.',
+      inputSchema: toolStandardJSONSchema(v.strictObject({})),
+    },
+    () => callDocTool('list_recent_documents', {}),
+  )
 }
 
 export async function executeEditorTool(
