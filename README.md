@@ -22,8 +22,18 @@ design editor, inside an Obsidian tab, the way the Excalidraw plugin handles `.e
 - **Embed in notes:** `.fig` files show thumbnails in Reading view and Live Preview.
 - **Settings tab:** snapping and zoom speed.
 - **Insert icon:** search and insert [Iconify](https://iconify.design) icons from the toolbar, at the centre of the view or into the selected frame. **Iconify needs an internet connection.** Offline, the search shows no results and nothing else breaks. Turn it off in the settings tab under **Iconify import**.
+- **Variables:** bind number and colour fields to variables, and manage them in the page's Variables section, with modes.
+- **Assets tab:** components grouped by page, with real thumbnails; drag one onto the canvas or use **+** to insert it.
+- **Layers:** Shift-click to select a range; click a selected layer to rename it.
+- **Components:** Properties on main components (Text, Boolean, Instance swap), plus instance overrides and variants.
+- **Frame presets:** pick a preset for a selected frame, or from the list shown while the Frame tool is active.
+- **Effects:** drop, inner, layer and background blur; blend mode; show-behind; and shadow values you can bind to variables.
+- **Export scale:** type any scale, or pick one of the presets.
+- **Fonts:** the font picker shows **BUNDLED** and system fonts. Google Fonts and Fontsource listings are not available yet.
 - If a file changes on disk (sync, another app) while you have no unsaved edits, the tab reloads it.
-- Desktop only.
+- **Desktop:** full editor.
+- **iOS (beta):** a read-only preview. Pan with one finger, pinch to zoom, double-tap to fit. Pick another page from the button at the top-left. It never changes your file. Install through BRAT (see below).
+- **Android:** not verified yet.
 
 > **Keep backups of Figma files.** OpenPencil warns that saving a complex Figma `.fig` can lose
 > fidelity when it is reopened in Figma. Autosave overwrites the file in place.
