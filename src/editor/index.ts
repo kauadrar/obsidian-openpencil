@@ -28,6 +28,7 @@ import { penFormat } from '@open-pencil/core/io'
 import { getCanvasKit } from '@open-pencil/core/canvaskit'
 import { SceneGraph } from '@open-pencil/scene-graph'
 import { provideEditor } from '@open-pencil/vue'
+import type { OpenPencilSettings } from '../settings'
 
 import Shell from './Shell.vue'
 
@@ -65,12 +66,16 @@ export interface MountOptions {
   notify?: Notify
   /** Resolves vault drags (e.g. from Obsidian's file explorer) into File objects. */
   resolveDropFiles?: ResolveDropFiles
+  /** Initial plugin preferences (snapping and zoom speed). */
+  initialSettings?: OpenPencilSettings
 }
 
 export interface MountedEditor {
   readonly editor: Editor
   /** Whether this editor takes keyboard input; Obsidian can show several editors at once. */
   setActive(active: boolean): void
+  /** Applies updated plugin preferences live. */
+  applySettings(next: OpenPencilSettings): void
   /** Whether OpenPencil can write this document's own format back; false for .pen today. */
   readonly canWrite: boolean
   /** The document in its own format. Throws when `canWrite` is false. */
@@ -182,6 +187,12 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
 
   const canWrite = opts.extension === 'fig' || penWritable
   const active = ref(true)
+  const zoomSpeed = ref(opts.initialSettings?.zoomSpeed ?? 1)
+  if (opts.initialSettings) {
+    editor.state.snappingPreferences.geometry = opts.initialSettings.snapToGeometry
+    editor.state.snappingPreferences.objects = opts.initialSettings.snapToObjects
+    editor.state.snappingPreferences.pixelGrid = opts.initialSettings.snapToPixelGrid
+  }
   const offHistory = editor.onEditorEvent('history:changed', (change) => {
     if (change !== 'clear') opts.onChange()
   })
@@ -206,6 +217,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
           ref: shellRef,
           editor,
           active,
+          zoomSpeed,
           readOnly: !canWrite,
           fileName: opts.fileName.replace(/\.[^.]+$/, ''),
           onSave: () => opts.onSaveRequest(),
@@ -227,6 +239,12 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
     editor,
     setActive(next) {
       active.value = next
+    },
+    applySettings(next) {
+      editor.state.snappingPreferences.geometry = next.snapToGeometry
+      editor.state.snappingPreferences.objects = next.snapToObjects
+      editor.state.snappingPreferences.pixelGrid = next.snapToPixelGrid
+      zoomSpeed.value = next.zoomSpeed
     },
     canWrite,
     async exportNative(documentName) {

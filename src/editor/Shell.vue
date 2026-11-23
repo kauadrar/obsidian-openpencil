@@ -2,9 +2,11 @@
 // The editor shell, laid out like OpenPencil's own window: a sidebar with pages and layers,
 // the canvas with rulers, and a floating icon toolbar. Built from @open-pencil/vue's unstyled
 // primitives; the look lives in styles.css under .op-shell.
-import { computed, defineComponent, h, inject, ref, type Ref } from 'vue'
+import { computed, defineComponent, h, inject, ref, watchEffect, type Ref } from 'vue'
 import { EDITOR_TOOLS, type Editor, type Tool } from '@open-pencil/core'
-import { CanvasRoot, CanvasSurface } from '@open-pencil/vue/canvas'
+import { CanvasRoot, CanvasSurface, useCanvasContext, useCanvasInput } from '@open-pencil/vue/canvas'
+import { useTextEdit } from '@open-pencil/vue/canvas/text-edit'
+import { toolCursor } from '@open-pencil/vue/editor/tool-cursor'
 import { ToolbarRoot } from '@open-pencil/vue/primitives/Toolbar'
 import { PageListRoot } from '@open-pencil/vue/primitives/PageList'
 import { LayerTreeRoot, LayerTreeItem } from '@open-pencil/vue/primitives/LayerTree'
@@ -34,10 +36,36 @@ import {
 const props = defineProps<{
   editor: Editor
   active: Ref<boolean>
+  zoomSpeed: Ref<number>
   readOnly: boolean
   fileName: string
 }>()
 const emit = defineEmits<{ save: [] }>()
+
+/** Bridges CanvasRoot's input so zoomSpeed can be updated live from Obsidian settings. */
+const CanvasInputBridge = defineComponent({
+  setup() {
+    const { canvasRef, hitTestSectionTitle, hitTestComponentLabel, hitTestFrameTitle } = useCanvasContext()
+    const { cursorOverride } = useCanvasInput(
+      canvasRef,
+      props.editor,
+      hitTestSectionTitle,
+      hitTestComponentLabel,
+      hitTestFrameTitle,
+      undefined,
+      undefined,
+      undefined,
+      () => props.zoomSpeed.value,
+    )
+    useTextEdit(canvasRef, props.editor)
+    watchEffect(() => {
+      const el = canvasRef.value
+      if (!el) return
+      el.style.cursor = toolCursor(props.editor.state.activeTool, cursorOverride.value) ?? ''
+    })
+    return () => null
+  },
+})
 
 useEditorKeyboard({
   active: () => props.active.value,
@@ -477,13 +505,14 @@ defineExpose({ canRunCommand, runCommand, placeFiles })
     </aside>
 
     <main class="op-canvas">
-      <CanvasRoot :key="showRulers ? 'rulers' : 'no-rulers'" :show-rulers="showRulers" @ready="onReady" @failed="onFailed">
+      <CanvasRoot :key="showRulers ? 'rulers' : 'no-rulers'" :show-rulers="showRulers" :input="false" @ready="onReady" @failed="onFailed">
         <CanvasSurface
           class="op-surface"
           @contextmenu.prevent="onCanvasContextMenu"
           @dragover.prevent="($event.dataTransfer && ($event.dataTransfer.dropEffect = 'copy'))"
           @drop.prevent="onCanvasDrop"
         />
+        <CanvasInputBridge />
       </CanvasRoot>
 
       <button v-if="!sidebarOpen" class="op-icon-btn op-sidebar-toggle" title="Show sidebar" @click="sidebarOpen = true">

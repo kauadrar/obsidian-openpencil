@@ -8,12 +8,15 @@ import {
   MenuItem,
   Notice,
   Plugin,
+  PluginSettingTab,
+  Setting,
   TFile,
   normalizePath,
   type WorkspaceLeaf,
 } from 'obsidian'
 import type * as EditorModule from './editor/index'
 import { PLUGIN_COMMANDS } from './commands'
+import { DEFAULT_SETTINGS, sanitizeSettings, type OpenPencilSettings } from './settings'
 import { ensureEditorUnpacked } from './unpack'
 
 export const VIEW_TYPE = 'openpencil-design'
@@ -22,8 +25,12 @@ const AUTOSAVE_MS = 1500
 
 export default class OpenPencilPlugin extends Plugin {
   private editorModule: Promise<typeof EditorModule> | null = null
+  settings: OpenPencilSettings = { ...DEFAULT_SETTINGS }
 
   async onload() {
+    this.settings = sanitizeSettings(await this.loadData())
+    this.addSettingTab(new OpenPencilSettingTab(this.app, this))
+
     this.registerView(VIEW_TYPE, (leaf) => new DesignView(leaf, this))
     this.registerExtensions([...EXTENSIONS], VIEW_TYPE)
 
@@ -78,6 +85,14 @@ export default class OpenPencilPlugin extends Plugin {
     return this.editorModule
   }
 
+  async updateSettings(patch: Partial<OpenPencilSettings>): Promise<void> {
+    this.settings = sanitizeSettings({ ...this.settings, ...patch })
+    await this.saveData(this.settings)
+    for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
+      if (leaf.view instanceof DesignView) leaf.view.applySettings(this.settings)
+    }
+  }
+
   private async createDesign() {
     try {
       const mod = await this.loadEditor()
@@ -129,6 +144,9 @@ class DesignView extends FileView {
   }
   runCommand(id: string): void {
     this.mounted?.runCommand(id)
+  }
+  applySettings(next: OpenPencilSettings): void {
+    this.mounted?.applySettings(next)
   }
   async placeVaultFile(file: TFile): Promise<void> {
     if (!this.mounted) return
@@ -201,6 +219,7 @@ class DesignView extends FileView {
         showContextMenu: (entries, pos) => this.showContextMenu(entries, pos),
         notify: (msg) => new Notice(msg),
         resolveDropFiles: (dt) => this.resolveDropFiles(dt),
+        initialSettings: this.plugin.settings,
       })
       this.mounted.setActive(this.app.workspace.getActiveViewOfType(DesignView) === this)
     } catch (e) {
@@ -361,6 +380,57 @@ const MIME_BY_EXT: Record<string, string> = {
 
 function toDroppedFile(file: TFile, bytes: ArrayBuffer): File {
   return new File([bytes], file.name, { type: MIME_BY_EXT[file.extension.toLowerCase()] ?? 'application/octet-stream' })
+}
+
+class OpenPencilSettingTab extends PluginSettingTab {
+  constructor(app: App, private plugin: OpenPencilPlugin) {
+    super(app, plugin)
+  }
+
+  display(): void {
+    const { containerEl } = this
+    containerEl.empty()
+
+    new Setting(containerEl)
+      .setName('Snap to geometry')
+      .setDesc('Snap layers and vector points to nearby geometry while dragging.')
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.snapToGeometry).onChange((value) => {
+          void this.plugin.updateSettings({ snapToGeometry: value })
+        }),
+      )
+
+    new Setting(containerEl)
+      .setName('Snap to objects')
+      .setDesc('Snap moving layers to edges and centres of sibling layers.')
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.snapToObjects).onChange((value) => {
+          void this.plugin.updateSettings({ snapToObjects: value })
+        }),
+      )
+
+    new Setting(containerEl)
+      .setName('Snap to pixel grid')
+      .setDesc('Align moved layers, resized edges, and vector points to whole pixels.')
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.snapToPixelGrid).onChange((value) => {
+          void this.plugin.updateSettings({ snapToPixelGrid: value })
+        }),
+      )
+
+    new Setting(containerEl)
+      .setName('Zoom speed')
+      .setDesc('Multiplier for mouse wheel and trackpad pinch zoom speed.')
+      .addSlider((slider) =>
+        slider
+          .setLimits(0.25, 3, 0.25)
+          .setValue(this.plugin.settings.zoomSpeed)
+          .setDynamicTooltip()
+          .onChange((value) => {
+            void this.plugin.updateSettings({ zoomSpeed: value })
+          }),
+      )
+  }
 }
 
 class PlaceFileModal extends FuzzySuggestModal<TFile> {
