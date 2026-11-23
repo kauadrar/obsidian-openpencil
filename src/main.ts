@@ -22,7 +22,7 @@ import { createDesignEmbedExtension, DesignEmbedManager, processDesignEmbeds } f
 import { DEFAULT_SETTINGS, sanitizeSettings, type OpenPencilSettings } from './settings'
 import { ensureEditorUnpacked } from './unpack'
 import { createMcpRpcSender, type McpDocumentSummary, type McpHost } from './mcp/adapter'
-import { generateMcpToken, McpServerController, type McpServerStatus } from './mcp/server'
+import type { McpServerController, McpServerStatus } from './mcp/server'
 
 export const VIEW_TYPE = 'openpencil-design'
 const EXTENSIONS = ['fig', 'pen'] as const
@@ -97,6 +97,7 @@ export default class OpenPencilPlugin extends Plugin {
     }
 
     if (Platform.isDesktopApp) {
+      const { generateMcpToken, McpServerController } = await import('./mcp/server')
       if (!this.settings.mcpToken) {
         this.settings = sanitizeSettings({ ...this.settings, mcpToken: generateMcpToken() })
         await this.saveData(this.settings)
@@ -127,7 +128,12 @@ export default class OpenPencilPlugin extends Plugin {
         const url = adapter.getResourcePath(normalizePath(`${editorDir}/editor.js`))
         return import(/* @vite-ignore */ url) as Promise<typeof EditorModule>
       })
-      this.editorModule.catch(() => (this.editorModule = null))
+      this.editorModule.catch((err) => {
+        this.editorModule = null
+        if (Platform.isMobile) {
+          new Notice(`OpenPencil v${this.manifest.version}: failed to load editor assets — ${message(err)}`, 10000)
+        }
+      })
     }
     return this.editorModule
   }
@@ -156,6 +162,8 @@ export default class OpenPencilPlugin extends Plugin {
   }
 
   async regenerateMcpToken(): Promise<string> {
+    if (!Platform.isDesktopApp) return this.settings.mcpToken
+    const { generateMcpToken } = await import('./mcp/server')
     const token = generateMcpToken()
     this.settings = sanitizeSettings({ ...this.settings, mcpToken: token })
     await this.saveData(this.settings)
@@ -529,8 +537,13 @@ class DesignView extends FileView {
         fileName: file.name,
         extension: file.extension as EditorModule.DesignExtension,
         readAsset: (rel) => this.readSibling(file, rel),
-        onChange: () => this.markDirty(),
-        onSaveRequest: () => void this.save(),
+        onChange: () => {
+          if (!Platform.isMobile) this.markDirty()
+        },
+        onSaveRequest: () => {
+          if (!Platform.isMobile) void this.save()
+        },
+        previewOnly: Platform.isMobile,
         writeExport: (name, bytes) => this.writeExport(file, name, bytes),
         showContextMenu: (entries, pos) => this.showContextMenu(entries, pos),
         notify: (msg) => new Notice(msg),
@@ -541,7 +554,11 @@ class DesignView extends FileView {
       this.mounted.setActive(this.app.workspace.getActiveViewOfType(DesignView) === this)
     } catch (e) {
       loading.setText('')
-      host.createDiv({ cls: 'openpencil-error', text: `OpenPencil could not open ${file.name}: ${message(e)}` })
+      const msg = message(e)
+      host.createDiv({ cls: 'openpencil-error', text: `OpenPencil could not open ${file.name}: ${msg}` })
+      if (Platform.isMobile) {
+        new Notice(`OpenPencil v${this.plugin.manifest.version}: ${msg}`, 10000)
+      }
       console.error('[openpencil]', e)
     }
   }
@@ -557,6 +574,7 @@ class DesignView extends FileView {
   }
 
   private markDirty() {
+    if (Platform.isMobile) return
     if (!this.mounted?.canWrite) return // OpenPencil cannot write this format back
     this.dirty = true
     if (this.saveTimer !== null) window.clearTimeout(this.saveTimer)
@@ -571,6 +589,7 @@ class DesignView extends FileView {
   }
 
   async save(): Promise<void> {
+    if (Platform.isMobile) return
     const file = this.file
     const mounted = this.mounted
     if (!file || !mounted) return
