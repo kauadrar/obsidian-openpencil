@@ -567,6 +567,55 @@ try {
     check('Nested frame with duplicate name gets layer id suffix',
       exportRes.nestedExport?.name === `Smoke - Card-Hero-1-${exportRes.nestedId.replace(/[\\/:*?"<>|#^[\]]/g, '-')}.png`,
       JSON.stringify(exportRes.nestedExport))
+
+    // Spec 17: Colour picker popover, models (RGB/HSL/HSB/OkHCL), inline hex, and undo.
+    await page.evaluate((id) => {
+      const ed = window.smokeEditor
+      ed.select([id])
+    }, s8.other)
+    await page.locator('.op-swatch').first().click()
+    await page.locator('.op-cp-popover').waitFor({ state: 'visible' })
+    const cpInfo = await page.evaluate(() => {
+      const pop = document.querySelector('.op-cp-popover')
+      const opts = Array.from(pop?.querySelectorAll('.op-cp-select option') ?? []).map((o) => o.value)
+      return {
+        width: pop ? Math.round(pop.getBoundingClientRect().width) : 0,
+        hasArea: !!pop?.querySelector('.op-cp-area'),
+        sliders: pop?.querySelectorAll('.op-cp-slider').length ?? 0,
+        hasEyedropper: !!pop?.querySelector('.op-cp-eyedropper'),
+        opts,
+      }
+    })
+    check('Colour picker popover is 240 px with SV area, hue/alpha sliders, eyedropper, and RGB/HSL/HSB/OkHCL (no HEX)',
+      cpInfo.width === 240 && cpInfo.hasArea && cpInfo.sliders === 2 && cpInfo.hasEyedropper &&
+      cpInfo.opts.join(',') === 'rgb,hsl,hsb,okhcl',
+      JSON.stringify(cpInfo))
+
+    await page.locator('.op-cp-select').selectOption('okhcl')
+    const okhclInfo = await page.evaluate(() => {
+      const pop = document.querySelector('.op-cp-popover')
+      return {
+        sliders: pop?.querySelectorAll('.op-cp-slider').length ?? 0,
+        hasGamut: !!pop?.querySelector('.op-cp-gamut'),
+      }
+    })
+    check('OkHCL mode shows Hue/Chroma/Lightness/Alpha sliders and gamut badge',
+      okhclInfo.sliders === 4 && okhclInfo.hasGamut,
+      JSON.stringify(okhclInfo))
+
+    // Close popover, edit inline hex, and verify undo.
+    await page.keyboard.press('Escape')
+    const hexInput = page.locator('.op-hex').first()
+    const beforeHex = await hexInput.inputValue()
+    await hexInput.click()
+    await hexInput.fill('FF5500')
+    await hexInput.press('Enter')
+    const afterHex = await hexInput.inputValue()
+    await page.keyboard.press(`${mod}+z`)
+    const undoneHex = await hexInput.inputValue()
+    check('Inline hex edits fill color and Undo reverts it',
+      afterHex === 'FF5500' && undoneHex === beforeHex,
+      `${beforeHex} -> ${afterHex} -> ${undoneHex}`)
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
