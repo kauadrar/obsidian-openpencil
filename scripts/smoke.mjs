@@ -81,6 +81,101 @@ try {
     await page.mouse.move(600, 300)
     await page.keyboard.press('c')
     check('C key does not arm Comment', await page.evaluate(() => window.smokeEditor.state.activeTool) === 'SELECT')
+
+    // Spec 05: missing keyboard shortcuts, focus guards, and excluded keys.
+    const mod = process.platform === 'darwin' ? 'Meta' : 'Control'
+    await page.keyboard.press('i')
+    check('I key arms Eyedropper', await page.evaluate(() => window.smokeEditor.state.activeTool) === 'EYEDROPPER')
+    await page.keyboard.press('Escape')
+
+    await page.keyboard.press('Shift+C')
+    check('Shift+C does not arm Comment', await page.evaluate(() => window.smokeEditor.state.activeTool) === 'SELECT')
+
+    const rulersBefore = await page.evaluate(() => window.smokeEditor.state.showRulers)
+    await page.keyboard.press('Shift+R')
+    const rulersAfter = await page.evaluate(() => window.smokeEditor.state.showRulers)
+    await page.keyboard.press('Shift+R')
+    check('Shift+R toggles rulers', rulersBefore === true && rulersAfter === false)
+
+    const gridBefore = await page.evaluate(() => window.smokeEditor.state.showPixelGrid)
+    await page.keyboard.press("Shift+'")
+    const gridAfter = await page.evaluate(() => window.smokeEditor.state.showPixelGrid)
+    await page.keyboard.press("Shift+'")
+    check("Shift+' toggles pixel grid", gridAfter !== gridBefore)
+
+    const snapBefore = await page.evaluate(() => window.smokeEditor.state.snappingPreferences.pixelGrid)
+    await page.keyboard.press(`${mod}+Shift+'`)
+    const snapAfter = await page.evaluate(() => window.smokeEditor.state.snappingPreferences.pixelGrid)
+    await page.keyboard.press(`${mod}+Shift+'`)
+    check("Mod+Shift+' toggles snap to pixel grid", snapAfter === !snapBefore)
+
+    // Align, frame selection, boolean union, flatten, copy/paste properties, paste to replace, text underline.
+    const setupIds = await page.evaluate(() => {
+      const ed = window.smokeEditor
+      const pageId = ed.state.currentPageId
+      const a = ed.graph.createNode('RECTANGLE', pageId, {
+        name: 'KB A', x: 20, y: 30, width: 40, height: 40,
+        fills: [{ type: 'SOLID', color: { r: 1, g: 0, b: 0, a: 1 }, opacity: 1, visible: true, blendMode: 'NORMAL' }],
+      })
+      const b = ed.graph.createNode('RECTANGLE', pageId, {
+        name: 'KB B', x: 100, y: 90, width: 60, height: 60,
+        fills: [{ type: 'SOLID', color: { r: 0, g: 0, b: 1, a: 1 }, opacity: 1, visible: true, blendMode: 'NORMAL' }],
+      })
+      const txt = ed.graph.createNode('TEXT', pageId, { name: 'KB Text', x: 200, y: 200, width: 80, height: 24, text: 'Hello' })
+      ed.select([a.id, b.id])
+      return { a: a.id, b: b.id, txt: txt.id }
+    })
+
+    await page.keyboard.press('Alt+a')
+    check('Alt+A aligns left', await page.evaluate((id) => window.smokeEditor.graph.getNode(id)?.x === 20, setupIds.b))
+    await page.keyboard.press(`${mod}+z`)
+    check('Undo reverts Alt+A', await page.evaluate((id) => window.smokeEditor.graph.getNode(id)?.x === 100, setupIds.b))
+
+    await page.keyboard.press('Alt+Shift+u')
+    check('Alt+Shift+U creates boolean union', await page.evaluate(() => window.smokeEditor.getSelectedNode()?.type === 'BOOLEAN_OPERATION'))
+    await page.keyboard.press(`${mod}+z`)
+
+    await page.evaluate((id) => window.smokeEditor.select([id]), setupIds.a)
+    await page.keyboard.press(`${mod}+Alt+g`)
+    check('Mod+Alt+G frames selection', await page.evaluate((id) => {
+      const ed = window.smokeEditor
+      return ed.graph.getNode(ed.graph.getNode(id)?.parentId ?? '')?.type === 'FRAME'
+    }, setupIds.a))
+    await page.keyboard.press(`${mod}+z`)
+
+    await page.evaluate((id) => window.smokeEditor.select([id]), setupIds.a)
+    await page.keyboard.press(`${mod}+Alt+c`)
+    await page.evaluate((id) => window.smokeEditor.select([id]), setupIds.b)
+    await page.keyboard.press(`${mod}+Alt+v`)
+    await page.waitForTimeout(50)
+    check('Mod+Alt+C / Mod+Alt+V copies and pastes properties', await page.evaluate((id) => {
+      const fill = window.smokeEditor.graph.getNode(id)?.fills?.[0]?.color
+      return fill ? fill.r === 1 && fill.b === 0 : false
+    }, setupIds.b))
+    await page.keyboard.press(`${mod}+z`)
+
+    await page.evaluate((id) => window.smokeEditor.select([id]), setupIds.a)
+    await page.keyboard.press(`${mod}+c`)
+    await page.evaluate((id) => window.smokeEditor.select([id]), setupIds.b)
+    await page.keyboard.press(`${mod}+Shift+r`)
+    await page.waitForTimeout(50)
+    check('Mod+Shift+R pastes to replace', await page.evaluate((ids) => {
+      const ed = window.smokeEditor
+      return ed.graph.getNode(ids.b) == null && ed.getSelectedNode()?.name === 'KB A'
+    }, setupIds))
+    await page.keyboard.press(`${mod}+z`)
+
+    await page.evaluate((id) => window.smokeEditor.select([id]), setupIds.txt)
+    await page.keyboard.press(`${mod}+u`)
+    check('Mod+U toggles underline on selected text layer', await page.evaluate((id) => window.smokeEditor.graph.getNode(id)?.textDecoration === 'UNDERLINE', setupIds.txt))
+    await page.keyboard.press(`${mod}+r`)
+    check('Mod+R is unbound by default', await page.evaluate(() => document.querySelector('.op-rename') === null))
+
+    // Focus guard: panel input blocks canvas shortcuts.
+    await page.focus('.op-design input')
+    await page.keyboard.press('i')
+    check('Panel input focus blocks canvas shortcuts', await page.evaluate(() => window.smokeEditor.state.activeTool === 'SELECT'))
+    await page.evaluate(() => (document.activeElement)?.blur?.())
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
