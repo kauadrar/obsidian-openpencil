@@ -846,6 +846,37 @@ try {
       JSON.stringify(spec22Res))
   }
 
+  // Spec 23: Constraints
+  {
+    const { frameId, childId } = await page.evaluate(() => {
+      const ed = window.smokeEditor
+      const f = ed.graph.createNode('FRAME', ed.state.currentPageId, {
+        name: 'Spec23Frame', x: 50, y: 50, width: 200, height: 200,
+      })
+      const c = ed.graph.createNode('RECTANGLE', f.id, {
+        name: 'Spec23Child', x: 20, y: 20, width: 60, height: 40,
+      })
+      ed.select([f.id])
+      return { frameId: f.id, childId: c.id }
+    })
+    await page.waitForTimeout(100)
+    const hiddenOnTop = (await page.locator('.op-constraints-section').count()) === 0
+    await page.evaluate((id) => window.smokeEditor.select([id]), childId)
+    await page.waitForTimeout(100)
+    const shownOnChild = (await page.locator('.op-constraints-section').count()) === 1
+    await page.locator('.op-pin-right').dispatchEvent('click')
+    await page.locator('.op-pin-left').dispatchEvent('click', { shiftKey: true })
+    await page.locator('select[aria-label="Vertical constraint"]').selectOption('MAX')
+    await page.waitForTimeout(100)
+    const spec23Res = await page.evaluate(() => {
+      const n = window.smokeEditor.getSelectedNode()
+      return { h: n?.horizontalConstraint, v: n?.verticalConstraint }
+    })
+    check('Constraints hidden on top-level frame, shown on child, pins + select work',
+      hiddenOnTop && shownOnChild && spec23Res.h === 'STRETCH' && spec23Res.v === 'MAX',
+      JSON.stringify({ hiddenOnTop, shownOnChild, ...spec23Res }))
+  }
+
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
   check('.pen opens and the canvas starts', pen.ok, pen.error)
   check('.pen has layers', pen.nodes > 1, `${pen.nodes} nodes, pages: ${pen.pages?.join(', ')}`)

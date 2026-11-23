@@ -11,6 +11,8 @@ import { setPageBackgrounds } from '@open-pencil/core/figma-api'
 import { useEditor } from '@open-pencil/vue'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import { PositionControlsRoot } from '@open-pencil/vue/primitives/PositionControls'
+import { ConstraintsControlRoot } from '@open-pencil/vue/primitives/ConstraintsControl'
+import type { ConstraintType } from '@open-pencil/scene-graph'
 import { useFontPicker } from '@open-pencil/vue/primitives/FontPicker'
 import { TypographyControlsRoot } from '@open-pencil/vue/primitives/TypographyControls'
 import { useNodeProps } from '@open-pencil/vue/controls/node-props'
@@ -417,6 +419,94 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
           </div>
         </section>
       </PositionControlsRoot>
+
+      <ConstraintsControlRoot v-slot="con">
+        <section v-if="con.active" class="op-prop op-constraints-section">
+          <div class="op-prop-head">Constraints</div>
+          <div class="op-constraints-row">
+            <div class="op-constraints-diagram" title="Click pin to set, Shift+click to add">
+              <div class="op-constraints-inner">
+                <button
+                  type="button"
+                  class="op-pin op-pin-h-center"
+                  :class="{ 'is-active': con.horizontal === 'CENTER' }"
+                  title="Horizontal center"
+                  @click="con.actions.setCenter('horizontal')"
+                />
+                <button
+                  type="button"
+                  class="op-pin op-pin-v-center"
+                  :class="{ 'is-active': con.vertical === 'CENTER' }"
+                  title="Vertical center"
+                  @click="con.actions.setCenter('vertical')"
+                />
+              </div>
+              <button
+                type="button"
+                class="op-pin op-pin-left"
+                :class="{ 'is-active': con.horizontal === 'MIN' || con.horizontal === 'STRETCH' }"
+                title="Left"
+                @click="(e: MouseEvent) => con.actions.togglePin('horizontal', 'leading', e.shiftKey)"
+              />
+              <button
+                type="button"
+                class="op-pin op-pin-right"
+                :class="{ 'is-active': con.horizontal === 'MAX' || con.horizontal === 'STRETCH' }"
+                title="Right"
+                @click="(e: MouseEvent) => con.actions.togglePin('horizontal', 'trailing', e.shiftKey)"
+              />
+              <button
+                type="button"
+                class="op-pin op-pin-top"
+                :class="{ 'is-active': con.vertical === 'MIN' || con.vertical === 'STRETCH' }"
+                title="Top"
+                @click="(e: MouseEvent) => con.actions.togglePin('vertical', 'leading', e.shiftKey)"
+              />
+              <button
+                type="button"
+                class="op-pin op-pin-bottom"
+                :class="{ 'is-active': con.vertical === 'MAX' || con.vertical === 'STRETCH' }"
+                title="Bottom"
+                @click="(e: MouseEvent) => con.actions.togglePin('vertical', 'trailing', e.shiftKey)"
+              />
+              <span
+                v-if="con.horizontal === 'SCALE' || con.vertical === 'SCALE'"
+                class="op-constraints-scale-badge"
+              >Scale</span>
+            </div>
+            <div class="op-constraints-selects">
+              <label class="op-field">
+                <select
+                  aria-label="Horizontal constraint"
+                  :value="typeof con.horizontal === 'string' ? con.horizontal : ''"
+                  @change="(e: Event) => con.actions.setHorizontal((e.target as HTMLSelectElement).value as ConstraintType)"
+                >
+                  <option v-if="typeof con.horizontal !== 'string'" value="" disabled>Mixed</option>
+                  <option value="MIN">Left</option>
+                  <option value="CENTER">Center</option>
+                  <option value="MAX">Right</option>
+                  <option value="STRETCH">Left and right</option>
+                  <option value="SCALE">Scale</option>
+                </select>
+              </label>
+              <label class="op-field">
+                <select
+                  aria-label="Vertical constraint"
+                  :value="typeof con.vertical === 'string' ? con.vertical : ''"
+                  @change="(e: Event) => con.actions.setVertical((e.target as HTMLSelectElement).value as ConstraintType)"
+                >
+                  <option v-if="typeof con.vertical !== 'string'" value="" disabled>Mixed</option>
+                  <option value="MIN">Top</option>
+                  <option value="CENTER">Center</option>
+                  <option value="MAX">Bottom</option>
+                  <option value="STRETCH">Top and bottom</option>
+                  <option value="SCALE">Scale</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </section>
+      </ConstraintsControlRoot>
 
       <AutoLayoutSection />
 
