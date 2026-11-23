@@ -255,6 +255,49 @@ try {
     await page.keyboard.press(`${mod}+z`)
     const afterUndoCut = await page.evaluate((id) => window.smokeEditor.graph.getNode(id) != null, setupIds.a)
     check('Undo restores Cut layer', afterUndoCut)
+
+    // Spec 07: pages rename, delete, reorder, dividers.
+    await page.locator('.op-page', { hasText: 'Page 2' }).click()
+    await page.locator('.op-page', { hasText: 'Page 2' }).click()
+    await page.waitForSelector('.op-page .op-rename')
+    await page.fill('.op-page .op-rename', 'Renamed')
+    await page.keyboard.press('Enter')
+    check('Click selected page renames inline and Enter commits', await page.evaluate(() => window.smokeEditor.graph.getPages().some((p) => p.name === 'Renamed')))
+
+    // Escape cancels rename; empty name keeps old name.
+    await page.locator('.op-page', { hasText: 'Renamed' }).dblclick()
+    await page.fill('.op-page .op-rename', 'Discarded')
+    await page.keyboard.press('Escape')
+    check('Escape cancels page rename', await page.evaluate(() => window.smokeEditor.graph.getPages().some((p) => p.name === 'Renamed')))
+
+    await page.locator('.op-page', { hasText: 'Renamed' }).dblclick()
+    await page.fill('.op-page .op-rename', '   ')
+    await page.keyboard.press('Enter')
+    check('Empty page rename keeps old name', await page.evaluate(() => window.smokeEditor.graph.getPages().some((p) => p.name === 'Renamed')))
+
+    // Dash-named page renders as divider.
+    await page.evaluate(() => window.smokeEditor.addPage('---'))
+    check('Dash-named page renders as divider', await page.locator('.op-page.is-divider .op-page-divider').count() === 1)
+
+    // Drag-to-reorder pages.
+    await page.locator('.op-page', { hasText: 'Renamed' }).dragTo(page.locator('.op-page').first(), { targetPosition: { x: 20, y: 2 } })
+    const orderAfterDrag = await page.evaluate(() => window.smokeEditor.graph.getPages().map((p) => p.name))
+    check('Drag reorders pages', orderAfterDrag[0] === 'Renamed')
+
+    // Right-click Delete removes page and Undo restores it; disabled on last page.
+    await page.locator('.op-page', { hasText: 'Renamed' }).click({ button: 'right' })
+    await page.evaluate(() => window.smokeLastMenu?.entries.find((e) => e.label === 'Delete')?.action?.())
+    check('Page context menu Delete removes page', await page.evaluate(() => !window.smokeEditor.graph.getPages().some((p) => p.name === 'Renamed')))
+    await page.keyboard.press(`${mod}+z`)
+    check('Undo restores deleted page', await page.evaluate(() => window.smokeEditor.graph.getPages().some((p) => p.name === 'Renamed')))
+
+    // Delete all extra pages until 1 remains, then verify Delete is disabled.
+    while (await page.evaluate(() => window.smokeEditor.graph.getPages().length > 1)) {
+      await page.locator('.op-page').last().click({ button: 'right' })
+      await page.evaluate(() => window.smokeLastMenu?.entries.find((e) => e.label === 'Delete')?.action?.())
+    }
+    await page.locator('.op-page').first().click({ button: 'right' })
+    check('Page Delete is disabled when only 1 page remains', await page.evaluate(() => window.smokeLastMenu?.entries.find((e) => e.label === 'Delete')?.disabled === true))
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
