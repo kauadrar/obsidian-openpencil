@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 import { openPencil } from '@open-pencil/core/node/vite'
@@ -8,6 +9,11 @@ import { openPencil } from '@open-pencil/core/node/vite'
 export default defineConfig({
   base: './',
   plugins: [vue(), openPencil({ inject: false })],
+  resolve: {
+    alias: {
+      '#mcp': fileURLToPath(new URL('./node_modules/@open-pencil/mcp/src', import.meta.url)),
+    },
+  },
   define: { 'process.env.NODE_ENV': JSON.stringify('production') },
   build: {
     outDir: 'build/editor',
