@@ -152,6 +152,19 @@ function onCanvasContextMenu(event: MouseEvent) {
   buildContextMenu(event, pos)
 }
 
+// Shift selects the range from the anchor row (a single select when there is none); Cmd/Ctrl adds or
+// removes one row; a plain click on a row that is already selected starts its inline rename.
+function onLayerClick(
+  event: MouseEvent,
+  node: { id: string; name: string },
+  wasSelected: boolean,
+  select: (mode: boolean | { additive: boolean; range: boolean }) => void,
+) {
+  if (event.shiftKey) return select({ additive: event.metaKey, range: true })
+  if (!event.metaKey && wasSelected) return layerRename.start(node.id, node.name)
+  select(event.metaKey)
+}
+
 function onLayerContextMenu(nodeId: string, event: MouseEvent) {
   if (!props.editor.state.selectedIds.has(nodeId)) props.editor.select([nodeId])
   buildContextMenu(event)
@@ -557,8 +570,7 @@ defineExpose({ canRunCommand, runCommand, placeFiles })
                   [`drop-${instruction?.type}`]: instruction && instructionTargetId === node.id,
                 }"
                 :style="{ paddingLeft: `calc(${padLeft} + 4px)` }"
-                @click="actions.select($event.shiftKey || $event.metaKey)"
-                @dblclick="layerRename.start(node.id, node.name)"
+                @click="onLayerClick($event, node, isSelected, (mode) => tree.select(node.id, mode))"
                 @contextmenu.prevent.stop="onLayerContextMenu(row.node.id, $event)"
               >
                 <button
