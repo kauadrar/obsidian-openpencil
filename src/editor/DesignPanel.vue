@@ -487,7 +487,13 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
                       />
                     </label>
                     <div v-if="strokeDash.on" class="op-grid2">
-                      <NumField label="Dash" :min="0" :digits="1" :value="strokeDash.dash" @commit="(v: number) => { const s = strokes.items.value[0]; if (s) strokes.actions.patch(0, strokeControls.setDash(s, v)) }" />
+                      <NumField
+                        label="Dash"
+                        :min="0"
+                        :digits="1"
+                        :value="strokeDash.dash"
+                        @commit="(v: number) => { const s = strokes.items.value[0]; if (s) strokes.actions.patch(0, v <= 0 ? { dashPattern: [] } : strokeControls.setDash(s, v)) }"
+                      />
                       <NumField label="Gap" :min="0" :digits="1" :value="strokeDash.gap" @commit="(v: number) => { const s = strokes.items.value[0]; if (s) strokes.actions.patch(0, strokeControls.setGap(s, v)) }" />
                     </div>
                     <div class="op-stroke-row">
