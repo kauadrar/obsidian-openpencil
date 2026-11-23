@@ -1213,3 +1213,26 @@
 .op-stroke-sides {
   margin-top: 4px;
 }
+
+/* Spec 21: Dimensions & min/max rows */
+.op-dim-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+}
+.op-minmax-add {
+  margin-top: 4px;
+}
+.op-minmax-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+.op-minmax-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px;
+}

@@ -350,9 +350,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
               <NumField label="X" :value="pos.xValue" @commit="(v: number, p: number) => setProp(pos.actions, 'x', v, p)" />
               <NumField label="Y" :value="pos.yValue" @commit="(v: number, p: number) => setProp(pos.actions, 'y', v, p)" />
             </template>
-            <NumField label="W" :value="pos.wValue" :min="0.01" @commit="(v: number, p: number) => setProp(pos.actions, 'width', v, p)" />
-            <NumField label="H" :value="pos.hValue" :min="0.01" @commit="(v: number, p: number) => setProp(pos.actions, 'height', v, p)" />
-            <NumField v-if="pos.rotates" label="↻" title="Rotation" suffix="°" :value="pos.rotationValue" @commit="(v: number, p: number) => setProp(pos.actions, 'rotation', v, p)" />
+            <NumField v-if="pos.rotates" label="↻" title="Rotation" suffix="°" :value="pos.rotationValue" @commit="(v: number) => setProp(pos.actions, 'rotation', v, pos.rotationValue as number)" />
           </div>
           <div class="op-transform-row">
             <button class="op-icon-btn" title="Flip horizontal (Shift+H)" @click="pos.actions.flip('horizontal')">⇄</button>

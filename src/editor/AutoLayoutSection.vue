@@ -1,9 +1,9 @@
 <script setup lang="ts">
-// The Design panel's Auto layout section, after OpenPencil's: add or remove auto layout, pick the
-// direction and wrap, align children on a 3×3 grid, and set gap, padding and resizing.
-// Everything goes through @open-pencil/vue's layout controls, so it is undoable.
-import { computed } from 'vue'
-import type { LayoutMode, LayoutSizing } from '@open-pencil/scene-graph'
+// The Design panel's Layout / Dimensions & Auto layout section: W/H with Fixed/Hug/Fill sizing,
+// min/max constraints, aspect-ratio lock, text resizing, Flow (Freeform/Vertical/Horizontal/Grid),
+// Wrap + counter-axis gap, Direction (Auto/LTR/RTL), Gap (number/Auto), and individual padding.
+import { computed, ref, watch } from 'vue'
+import type { LayoutDirection, LayoutMode, LayoutSizing } from '@open-pencil/scene-graph'
 import { useEditor } from '@open-pencil/vue'
 import { LayoutControlsRoot } from '@open-pencil/vue/primitives/LayoutControls'
 import { useNodeProps } from '@open-pencil/vue/controls/node-props'
@@ -11,10 +11,9 @@ import { LAYOUT_CONTAINER_TYPES, useSelectionLayout, type TextResizeMode } from 
 import { NumField } from './fields'
 
 const editor = useEditor()
-const { node, nodes, isMulti, updateAllWithUndo } = useNodeProps()
+const { node, nodes, isMulti, merged, updateAllWithUndo } = useNodeProps()
 const multi = useSelectionLayout()
 
-/** Layers that can hold an auto layout themselves; anything else gets wrapped in a new frame. */
 const CONTAINERS = new Set(['FRAME', 'COMPONENT', 'COMPONENT_SET', 'INSTANCE', 'SECTION'])
 const target = computed(() => (!isMulti.value ? node.value : null))
 const isContainer = computed(() => !!target.value && LAYOUT_CONTAINER_TYPES.has(target.value.type))
@@ -25,7 +24,7 @@ const canAdd = computed(() => nodes.value.length > 0 && !hasLayout.value)
 function addAutoLayout() {
   const n = target.value
   if (n && CONTAINERS.has(n.type)) editor.setLayoutMode(n.id, 'VERTICAL')
-  else editor.wrapInAutoLayout() // a group, shape or multi-selection: wrap it, as Shift+A does
+  else editor.wrapInAutoLayout()
 }
 function removeAutoLayout() {
   if (target.value) editor.setLayoutMode(target.value.id, 'NONE')
@@ -39,14 +38,108 @@ function toggleWrap() {
   updateAllWithUndo({ layoutWrap: n.layoutWrap === 'WRAP' ? 'NO_WRAP' : 'WRAP' }, 'Change wrap')
 }
 
-const SIZING_LABELS: Record<LayoutSizing, string> = { FIXED: 'Fixed', HUG: 'Hug', FILL: 'Fill' }
+// ---- Dimensions (W / H / Aspect-ratio lock / Min & Max)
+const num = (v: unknown): number | symbol => (typeof v === 'number' ? v : typeof v === 'symbol' ? v : 0)
+const widthValue = computed(() => num(merged('width')))
+const heightValue = computed(() => num(merged('height')))
 
+const ASPECT_LOCK_PLUGIN_ID = 'openpencil-obsidian'
+const ASPECT_LOCK_KEY = 'aspectRatioLock'
+const aspectLocked = computed(() => {
+  void editor.state.sceneVersion
+  return nodes.value.length > 0 && nodes.value.every((n) => n.pluginData?.some((p) => p.pluginId === ASPECT_LOCK_PLUGIN_ID && p.key === ASPECT_LOCK_KEY && p.value === '1'))
+})
+function toggleAspectLock() {
+  const next = !aspectLocked.value
+  editor.undo.runBatch('Toggle aspect ratio lock', () => {
+    for (const n of nodes.value) {
+      const rest = (n.pluginData ?? []).filter((p) => !(p.pluginId === ASPECT_LOCK_PLUGIN_ID && p.key === ASPECT_LOCK_KEY))
+      const pluginData = next ? [...rest, { pluginId: ASPECT_LOCK_PLUGIN_ID, key: ASPECT_LOCK_KEY, value: '1' }] : rest
+      editor.updateNodeWithUndo(n.id, { pluginData }, 'Toggle aspect ratio lock')
+    }
+  })
+}
+function commitWidth(v: number) {
+  const nextW = Math.max(0.01, v)
+  if (!aspectLocked.value) {
+    updateAllWithUndo({ width: nextW }, 'Change width')
+    return
+  }
+  editor.undo.runBatch('Change width (aspect locked)', () => {
+    for (const n of nodes.value) {
+      const ratio = n.width > 0 ? n.height / n.width : 1
+      editor.updateNodeWithUndo(n.id, { width: nextW, height: Math.max(0.01, Math.round(nextW * ratio * 100) / 100) }, 'Change width')
+    }
+  })
+}
+function commitHeight(v: number) {
+  const nextH = Math.max(0.01, v)
+  if (!aspectLocked.value) {
+    updateAllWithUndo({ height: nextH }, 'Change height')
+    return
+  }
+  editor.undo.runBatch('Change height (aspect locked)', () => {
+    for (const n of nodes.value) {
+      const ratio = n.height > 0 ? n.width / n.height : 1
+      editor.updateNodeWithUndo(n.id, { height: nextH, width: Math.max(0.01, Math.round(nextH * ratio * 100) / 100) }, 'Change height')
+    }
+  })
+}
+
+type MinMaxKey = 'minWidth' | 'maxWidth' | 'minHeight' | 'maxHeight'
+const hasMinW = computed(() => target.value?.minWidth !== null && target.value?.minWidth !== undefined)
+const hasMaxW = computed(() => target.value?.maxWidth !== null && target.value?.maxWidth !== undefined)
+const hasMinH = computed(() => target.value?.minHeight !== null && target.value?.minHeight !== undefined)
+const hasMaxH = computed(() => target.value?.maxHeight !== null && target.value?.maxHeight !== undefined)
+
+function addMinMax(key: MinMaxKey) {
+  const n = target.value
+  if (!n) return
+  const fallback = key.includes('Width') ? n.width : n.height
+  updateAllWithUndo({ [key]: Math.max(0, Math.round(fallback)) }, `Add ${key}`)
+}
+function commitMinMax(key: MinMaxKey, v: number) {
+  const n = target.value
+  if (!n) return
+  const val = Math.max(0, v)
+  if (key === 'minWidth') {
+    const patch: Record<string, number> = { minWidth: val }
+    if (n.maxWidth !== null && val > n.maxWidth) patch.maxWidth = val
+    updateAllWithUndo(patch, 'Change min width')
+  } else if (key === 'maxWidth') {
+    const clamped = n.minWidth !== null && val < n.minWidth ? n.minWidth : val
+    updateAllWithUndo({ maxWidth: clamped }, 'Change max width')
+  } else if (key === 'minHeight') {
+    const patch: Record<string, number> = { minHeight: val }
+    if (n.maxHeight !== null && val > n.maxHeight) patch.maxHeight = val
+    updateAllWithUndo(patch, 'Change min height')
+  } else {
+    const clamped = n.minHeight !== null && val < n.minHeight ? n.minHeight : val
+    updateAllWithUndo({ maxHeight: clamped }, 'Change max height')
+  }
+}
+function removeMinMax(key: MinMaxKey) {
+  updateAllWithUndo({ [key]: null }, `Remove ${key}`)
+}
+
+// ---- Individual padding toggle
+const individualPadding = ref(false)
+watch(
+  () => target.value?.id,
+  () => {
+    const n = target.value
+    individualPadding.value = !!n && (n.paddingLeft !== n.paddingRight || n.paddingTop !== n.paddingBottom)
+  },
+  { immediate: true },
+)
+
+const SIZING_LABELS: Record<LayoutSizing, string> = { FIXED: 'Fixed', HUG: 'Hug', FILL: 'Fill' }
 </script>
 
 <template>
   <section class="op-prop">
     <div class="op-prop-head">
-      Auto layout
+      Layout
       <button v-if="canAdd" class="op-icon-btn" title="Add auto layout (Shift+A)" @click="addAutoLayout">
         <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"><path d="M8 3v10M3 8h10" /></svg>
       </button>
@@ -55,25 +148,105 @@ const SIZING_LABELS: Record<LayoutSizing, string> = { FIXED: 'Fixed', HUG: 'Hug'
       </button>
     </div>
 
-    <LayoutControlsRoot v-if="hasLayout && target" v-slot="lay">
-      <div class="op-layout-row">
-        <div class="op-segmented op-layout-dir">
-          <button :class="{ 'is-active': mode === 'VERTICAL' }" title="Vertical layout" @click="setMode('VERTICAL')">
-            <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v11M5 10.5l3 3 3-3" /></svg>
-          </button>
-          <button :class="{ 'is-active': mode === 'HORIZONTAL' && target.layoutWrap !== 'WRAP' }" title="Horizontal layout" @click="setMode('HORIZONTAL'); target.layoutWrap === 'WRAP' && toggleWrap()">
-            <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 8h11M10.5 5l3 3-3 3" /></svg>
-          </button>
-          <button :class="{ 'is-active': mode === 'HORIZONTAL' && target.layoutWrap === 'WRAP' }" title="Wrap" @click="setMode('HORIZONTAL'); target.layoutWrap !== 'WRAP' && toggleWrap()">
+    <!-- Dimensions: W, H, Aspect-ratio lock, Min/Max -->
+    <div class="op-dim-row">
+      <NumField label="W" :value="widthValue" :min="0.01" @commit="commitWidth" />
+      <NumField label="H" :value="heightValue" :min="0.01" @commit="commitHeight" />
+      <button
+        type="button"
+        class="op-icon-btn"
+        :class="{ 'is-on': aspectLocked }"
+        title="Lock aspect ratio"
+        aria-label="Lock aspect ratio"
+        @click="toggleAspectLock"
+      >
+        <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round">
+          <path v-if="aspectLocked" d="M5 7V5a3 3 0 0 1 6 0v2M4 7h8v6H4z" />
+          <path v-else d="M5 7V5a3 3 0 0 1 5.6-1.5M4 7h8v6H4z" />
+        </svg>
+      </button>
+    </div>
+
+    <div v-if="target" class="op-minmax-add">
+      <select
+        class="op-cp-select"
+        value=""
+        aria-label="Add min/max constraint"
+        @change="(e: Event) => { const v = (e.target as HTMLSelectElement).value as MinMaxKey; if (v) addMinMax(v); (e.target as HTMLSelectElement).value = '' }"
+      >
+        <option value="" disabled>Add min/max…</option>
+        <option v-if="!hasMinW" value="minWidth">Add min width</option>
+        <option v-if="!hasMaxW" value="maxWidth">Add max width</option>
+        <option v-if="!hasMinH" value="minHeight">Add min height</option>
+        <option v-if="!hasMaxH" value="maxHeight">Add max height</option>
+      </select>
+    </div>
+
+    <div v-if="target && (hasMinW || hasMaxW || hasMinH || hasMaxH)" class="op-minmax-list">
+      <div v-if="hasMinW" class="op-minmax-row">
+        <NumField label="Min W" :min="0" :value="target.minWidth!" @commit="(v: number) => commitMinMax('minWidth', v)" />
+        <button type="button" class="op-icon-btn" title="Remove min width" @click="removeMinMax('minWidth')">×</button>
+      </div>
+      <div v-if="hasMaxW" class="op-minmax-row">
+        <NumField label="Max W" :min="0" :value="target.maxWidth!" @commit="(v: number) => commitMinMax('maxWidth', v)" />
+        <button type="button" class="op-icon-btn" title="Remove max width" @click="removeMinMax('maxWidth')">×</button>
+      </div>
+      <div v-if="hasMinH" class="op-minmax-row">
+        <NumField label="Min H" :min="0" :value="target.minHeight!" @commit="(v: number) => commitMinMax('minHeight', v)" />
+        <button type="button" class="op-icon-btn" title="Remove min height" @click="removeMinMax('minHeight')">×</button>
+      </div>
+      <div v-if="hasMaxH" class="op-minmax-row">
+        <NumField label="Max H" :min="0" :value="target.maxHeight!" @commit="(v: number) => commitMinMax('maxHeight', v)" />
+        <button type="button" class="op-icon-btn" title="Remove max height" @click="removeMinMax('maxHeight')">×</button>
+      </div>
+    </div>
+
+    <!-- Text Resizing (single & multi text layers) -->
+    <div v-if="multi.textResize.value !== undefined" class="op-segmented" role="group" aria-label="Text resizing">
+      <button :class="{ 'is-active': multi.textResize.value === 'AUTO_WIDTH' }" @click="multi.setTextResize('AUTO_WIDTH' as TextResizeMode)">Auto width</button>
+      <button :class="{ 'is-active': multi.textResize.value === 'AUTO_HEIGHT' }" @click="multi.setTextResize('AUTO_HEIGHT' as TextResizeMode)">Auto height</button>
+      <button :class="{ 'is-active': multi.textResize.value === 'FIXED' }" @click="multi.setTextResize('FIXED' as TextResizeMode)">Fixed</button>
+    </div>
+
+    <LayoutControlsRoot v-if="target" v-slot="lay">
+      <template v-if="hasLayout">
+        <div class="op-layout-row">
+          <div class="op-segmented op-layout-dir" role="group" aria-label="Flow">
+            <button :class="{ 'is-active': mode === 'NONE' }" title="Freeform" @click="setMode('NONE')">Freeform</button>
+            <button :class="{ 'is-active': mode === 'VERTICAL' }" title="Vertical layout" @click="setMode('VERTICAL')">↓</button>
+            <button :class="{ 'is-active': mode === 'HORIZONTAL' }" title="Horizontal layout" @click="setMode('HORIZONTAL')">→</button>
+            <button :class="{ 'is-active': mode === 'GRID' }" title="Grid" @click="setMode('GRID')">⊞</button>
+          </div>
+          <button
+            v-if="mode === 'HORIZONTAL' || mode === 'VERTICAL'"
+            type="button"
+            class="op-icon-btn"
+            :class="{ 'is-on': target.layoutWrap === 'WRAP' }"
+            title="Wrap"
+            aria-label="Wrap"
+            @click="toggleWrap"
+          >
             <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 4.5h9a2.5 2.5 0 010 5h-6M7 7.5l-2 2 2 2M2.5 13h4" /></svg>
           </button>
-          <button :class="{ 'is-active': mode === 'GRID' }" title="Grid" @click="setMode('GRID')">
-            <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25"><rect x="2.5" y="2.5" width="4.5" height="4.5" rx=".5" /><rect x="9" y="2.5" width="4.5" height="4.5" rx=".5" /><rect x="2.5" y="9" width="4.5" height="4.5" rx=".5" /><rect x="9" y="9" width="4.5" height="4.5" rx=".5" /></svg>
-          </button>
         </div>
-      </div>
 
-      <div class="op-grid2">
+        <div class="op-grid2">
+          <label class="op-field" title="Layout direction">
+            <span class="op-field-label">Dir</span>
+            <select
+              :value="target.layoutDirection ?? 'AUTO'"
+              aria-label="Layout direction"
+              @change="(e: Event) => updateAllWithUndo({ layoutDirection: (e.target as HTMLSelectElement).value as LayoutDirection }, 'Change layout direction')"
+            >
+              <option value="AUTO">Auto</option>
+              <option value="LTR">LTR</option>
+              <option value="RTL">RTL</option>
+            </select>
+          </label>
+        </div>
+      </template>
+
+      <div v-if="hasLayout || lay.widthSizingOptions.length > 1 || lay.heightSizingOptions.length > 1" class="op-grid2">
         <label class="op-field" title="Width resizing">
           <span class="op-field-label">W</span>
           <select :value="lay.widthSizing" @change="(e: Event) => lay.actions.setAxisSizing('width', (e.target as HTMLSelectElement).value as LayoutSizing)">
@@ -88,7 +261,7 @@ const SIZING_LABELS: Record<LayoutSizing, string> = { FIXED: 'Fixed', HUG: 'Hug'
         </label>
       </div>
 
-      <div v-if="lay.isFlex" class="op-layout-main">
+      <div v-if="hasLayout && lay.isFlex" class="op-layout-main">
         <div class="op-align-grid" :class="mode === 'VERTICAL' ? 'is-vertical' : 'is-horizontal'" role="radiogroup" aria-label="Alignment">
           <button
             v-for="(cell, i) in lay.alignGrid"
@@ -115,34 +288,73 @@ const SIZING_LABELS: Record<LayoutSizing, string> = { FIXED: 'Fixed', HUG: 'Hug'
               @commit="(v: number) => updateAllWithUndo({ itemSpacing: v }, 'Change gap')"
             />
             <div v-else class="op-field is-static"><span class="op-field-label">{{ mode === 'VERTICAL' ? '↕' : '↔' }}</span>Auto</div>
-            <button class="op-icon-btn" :class="{ 'is-on': lay.gapAuto }" :title="lay.gapAuto ? 'Fixed gap' : 'Auto gap (space between)'" @click="lay.actions.setGapAuto(!lay.gapAuto)">
-              <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"><path d="M2.5 3v10M13.5 3v10M5 8h6M6.5 6.5L5 8l1.5 1.5M9.5 6.5L11 8 9.5 9.5" /></svg>
+            <select
+              class="op-cp-select"
+              :value="lay.gapAuto ? 'auto' : 'fixed'"
+              aria-label="Gap mode"
+              @change="(e: Event) => lay.actions.setGapAuto((e.target as HTMLSelectElement).value === 'auto')"
+            >
+              <option value="fixed">Fixed</option>
+              <option value="auto">Auto</option>
+            </select>
+          </div>
+
+          <NumField
+            v-if="target.layoutWrap === 'WRAP'"
+            label="⇵"
+            title="Counter-axis gap"
+            :min="0"
+            :value="target.counterAxisSpacing ?? target.itemSpacing"
+            @commit="(v: number) => updateAllWithUndo({ counterAxisSpacing: v }, 'Change counter-axis gap')"
+          />
+
+          <div class="op-gap">
+            <template v-if="!individualPadding">
+              <NumField
+                label="⇿"
+                title="Horizontal padding"
+                :min="0"
+                :value="target.paddingLeft === target.paddingRight ? target.paddingLeft : Symbol('mixed')"
+                @commit="(v: number) => updateAllWithUndo({ paddingLeft: v, paddingRight: v }, 'Change horizontal padding')"
+              />
+              <NumField
+                label="⇳"
+                title="Vertical padding"
+                :min="0"
+                :value="target.paddingTop === target.paddingBottom ? target.paddingTop : Symbol('mixed')"
+                @commit="(v: number) => updateAllWithUndo({ paddingTop: v, paddingBottom: v }, 'Change vertical padding')"
+              />
+            </template>
+            <button
+              type="button"
+              class="op-icon-btn"
+              :class="{ 'is-on': individualPadding }"
+              title="Individual padding"
+              aria-label="Individual padding"
+              @click="individualPadding = !individualPadding"
+            >
+              <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25">
+                <rect x="3" y="3" width="10" height="10" rx="1" stroke-dasharray="2 2" />
+                <path d="M5 3h6M5 13h6" />
+              </svg>
             </button>
           </div>
-          <NumField
-            label="⇿"
-            title="Horizontal padding"
-            :min="0"
-            :value="target.paddingLeft === target.paddingRight ? target.paddingLeft : Symbol('mixed')"
-            @commit="(v: number) => updateAllWithUndo({ paddingLeft: v, paddingRight: v }, 'Change horizontal padding')"
-          />
-          <NumField
-            label="⇳"
-            title="Vertical padding"
-            :min="0"
-            :value="target.paddingTop === target.paddingBottom ? target.paddingTop : Symbol('mixed')"
-            @commit="(v: number) => updateAllWithUndo({ paddingTop: v, paddingBottom: v }, 'Change vertical padding')"
-          />
+          <div v-if="individualPadding" class="op-grid2">
+            <NumField label="T" title="Top padding" :min="0" :value="target.paddingTop" @commit="(v: number) => updateAllWithUndo({ paddingTop: v }, 'Change top padding')" />
+            <NumField label="R" title="Right padding" :min="0" :value="target.paddingRight" @commit="(v: number) => updateAllWithUndo({ paddingRight: v }, 'Change right padding')" />
+            <NumField label="B" title="Bottom padding" :min="0" :value="target.paddingBottom" @commit="(v: number) => updateAllWithUndo({ paddingBottom: v }, 'Change bottom padding')" />
+            <NumField label="L" title="Left padding" :min="0" :value="target.paddingLeft" @commit="(v: number) => updateAllWithUndo({ paddingLeft: v }, 'Change left padding')" />
+          </div>
         </div>
       </div>
 
-      <div v-if="lay.isGrid" class="op-prop-note">Grid tracks: {{ target.gridTemplateColumns?.length ?? 0 }} columns × {{ target.gridTemplateRows?.length ?? 0 }} rows</div>
+      <div v-if="hasLayout && lay.isGrid" class="op-prop-note">Grid tracks: {{ target.gridTemplateColumns?.length ?? 0 }} columns × {{ target.gridTemplateRows?.length ?? 0 }} rows</div>
     </LayoutControlsRoot>
 
     <template v-else-if="isMulti">
       <div v-if="multi.layoutMode.value !== undefined" class="op-layout-row">
         <div class="op-segmented op-layout-dir">
-          <button :class="{ 'is-active': multi.layoutMode.value === 'NONE' }" title="Freeform" @click="multi.setLayoutMode('NONE')">None</button>
+          <button :class="{ 'is-active': multi.layoutMode.value === 'NONE' }" title="Freeform" @click="multi.setLayoutMode('NONE')">Freeform</button>
           <button :class="{ 'is-active': multi.layoutMode.value === 'VERTICAL' }" title="Vertical layout" @click="multi.setLayoutMode('VERTICAL')">↓</button>
           <button :class="{ 'is-active': multi.layoutMode.value === 'HORIZONTAL' }" title="Horizontal layout" @click="multi.setLayoutMode('HORIZONTAL')">→</button>
         </div>
@@ -155,11 +367,6 @@ const SIZING_LABELS: Record<LayoutSizing, string> = { FIXED: 'Fixed', HUG: 'Hug'
         :value="multi.spacing.value"
         @commit="(v: number) => { multi.setSpacing(v); multi.flushSpacing() }"
       />
-      <div v-if="multi.textResize.value !== undefined" class="op-segmented">
-        <button :class="{ 'is-active': multi.textResize.value === 'AUTO_WIDTH' }" @click="multi.setTextResize('AUTO_WIDTH' as TextResizeMode)">Auto W</button>
-        <button :class="{ 'is-active': multi.textResize.value === 'AUTO_HEIGHT' }" @click="multi.setTextResize('AUTO_HEIGHT' as TextResizeMode)">Auto H</button>
-        <button :class="{ 'is-active': multi.textResize.value === 'FIXED' }" @click="multi.setTextResize('FIXED' as TextResizeMode)">Fixed</button>
-      </div>
       <label v-if="multi.clipsContent.value !== undefined" class="op-checkbox">
         <input
           type="checkbox"
