@@ -1,15 +1,18 @@
 <script setup lang="ts">
 // Assets tab: the document's local components, grouped by page. A row can be dragged onto the canvas
 // or inserted with its + button, which places an instance at the viewport centre.
-import { computed, ref } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import type { Editor } from '@open-pencil/core'
 import type { SceneNode } from '@open-pencil/scene-graph'
 import { collectComponents, COMPONENT_DRAG_TYPE, groupAssets } from './assets'
+import { cachedThumbnail, requestThumbnail } from './thumbnails'
 
 const props = defineProps<{ editor: Editor }>()
 
 const search = ref('')
 const collapsed = ref(new Set<string>())
+// Bumped when a thumbnail is stored, so rows that were waiting for one re-read the cache.
+const thumbVersion = ref(0)
 
 const groups = computed(() => {
   void props.editor.state.sceneVersion
@@ -20,6 +23,20 @@ const groups = computed(() => {
   }))
   return groupAssets(pages, search.value)
 })
+
+// Render thumbnails for every listed component. A cache hit costs one signature walk, so this stays cheap.
+watchEffect(() => {
+  for (const group of groups.value) {
+    for (const component of group.components) {
+      void requestThumbnail(props.editor, component.id, () => thumbVersion.value++)
+    }
+  }
+})
+
+function thumbUrl(componentId: string): string | null {
+  void thumbVersion.value
+  return cachedThumbnail(props.editor, componentId)
+}
 
 function toggle(pageId: string) {
   const next = new Set(collapsed.value)
@@ -89,7 +106,14 @@ function onDragStart(event: DragEvent, componentId: string) {
           :title="`Drag onto the canvas, or click +`"
           @dragstart="onDragStart($event, component.id)"
         >
-          <span class="op-asset-thumb" :style="thumbStyle(editor.graph.getNode(component.id))" aria-hidden="true" />
+          <img
+            v-if="thumbUrl(component.id)"
+            class="op-asset-thumb"
+            :src="thumbUrl(component.id) ?? undefined"
+            alt=""
+            draggable="false"
+          />
+          <span v-else class="op-asset-thumb" :style="thumbStyle(editor.graph.getNode(component.id))" aria-hidden="true" />
           <span class="op-asset-name">{{ component.name }}</span>
           <button
             type="button"

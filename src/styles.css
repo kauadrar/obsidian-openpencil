@@ -1792,3 +1792,9 @@
 .op-shell .op-assets-empty {
   padding: 8px 0;
 }
+.op-shell img.op-asset-thumb {
+  display: block;
+  object-fit: contain;
+  padding: 0;
+  background: var(--op-hover);
+}
