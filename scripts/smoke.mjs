@@ -591,7 +591,7 @@ try {
       cpInfo.opts.join(',') === 'rgb,hsl,hsb,okhcl',
       JSON.stringify(cpInfo))
 
-    await page.locator('.op-cp-select').selectOption('okhcl')
+    await page.locator('select[aria-label="Color model"]').selectOption('okhcl')
     const okhclInfo = await page.evaluate(() => {
       const pop = document.querySelector('.op-cp-popover')
       const tracks = Array.from(pop?.querySelectorAll('.op-cp-track') ?? [])
@@ -607,7 +607,7 @@ try {
       JSON.stringify(okhclInfo))
 
     // Switch back to RGB and verify SV square + Hue + Alpha sliders actually change colour.
-    await page.locator('.op-cp-select').selectOption('rgb')
+    await page.locator('select[aria-label="Color model"]').selectOption('rgb')
     const initialHex = await page.locator('.op-hex').first().inputValue()
     const areaBox = await page.locator('.op-cp-area').boundingBox()
     await page.mouse.click(areaBox.x + areaBox.width * 0.85, areaBox.y + areaBox.height * 0.25)
@@ -763,6 +763,39 @@ try {
     check('Blend mode has 19 modes on frame and independent corner radii sets TL',
       blendCount === 19 && spec20Res.blendMode === 'MULTIPLY' && spec20Res.independent && spec20Res.tl === 12,
       JSON.stringify({ blendCount, ...spec20Res }))
+
+    // Spec 21: Aspect-ratio lock, min/max clamping, auto-layout Direction/Wrap/counterAxisSpacing/individual padding.
+    await page.locator('button[title="Lock aspect ratio"]').click()
+    const wBefore = await page.evaluate(() => window.smokeEditor.getSelectedNode()?.width ?? 0)
+    const hBefore = await page.evaluate(() => window.smokeEditor.getSelectedNode()?.height ?? 0)
+    const wInput = page.locator('.op-dim-row input').first()
+    await wInput.click()
+    await wInput.fill(String(Math.round(wBefore * 2)))
+    await wInput.press('Enter')
+    const hAfter = await page.evaluate(() => window.smokeEditor.getSelectedNode()?.height ?? 0)
+    await page.locator('select[aria-label="Add min/max constraint"]').selectOption('minWidth')
+    await page.locator('select[aria-label="Add min/max constraint"]').selectOption('maxWidth')
+    const minWInput = page.locator('.op-minmax-row input').first()
+    await minWInput.click()
+    await minWInput.fill('500')
+    await minWInput.press('Enter')
+    const maxWClamped = await page.evaluate(() => window.smokeEditor.getSelectedNode()?.maxWidth ?? 0)
+    if (await page.locator('button[title="Add auto layout (Shift+A)"]').count() > 0) {
+      await page.locator('button[title="Add auto layout (Shift+A)"]').click()
+    }
+    await page.locator('select[aria-label="Layout direction"]').selectOption('RTL')
+    await page.locator('button[title="Wrap"]').click()
+    await page.locator('button[title="Individual padding"]').click()
+    const spec21Res = await page.evaluate(() => {
+      const n = window.smokeEditor.getSelectedNode()
+      return { dir: n?.layoutDirection, wrap: n?.layoutWrap }
+    })
+    check('Aspect-ratio lock scales H proportionally and minWidth clamps maxWidth',
+      Math.abs(hAfter - hBefore * 2) < 2 && maxWClamped === 500,
+      `hBefore=${hBefore}, hAfter=${hAfter}, maxWClamped=${maxWClamped}`)
+    check('Auto layout Direction (RTL) and Wrap toggle work',
+      spec21Res.dir === 'RTL' && spec21Res.wrap === 'WRAP',
+      JSON.stringify(spec21Res))
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
