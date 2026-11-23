@@ -1868,3 +1868,39 @@
 .op-shell .op-component-props.is-readonly .op-component-prop-default {
   opacity: 0.6;
 }
+
+/* Instance overrides (component properties and variants) */
+.op-shell .op-instance-prop {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 6px;
+  align-items: center;
+  min-height: 28px;
+}
+.op-shell .op-instance-prop-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--op-text-muted);
+}
+.op-shell .op-instance-prop-value {
+  box-sizing: border-box;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 11px;
+  color: inherit;
+  background: var(--op-hover);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  justify-self: start;
+}
+.op-shell input.op-instance-prop-value[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+}
+.op-shell .op-instance-variants-head {
+  margin-top: 8px;
+}

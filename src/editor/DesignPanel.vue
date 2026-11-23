@@ -29,6 +29,7 @@ import FillField from './FillField.vue'
 import BindableValueRow from './BindableValueRow.vue'
 import PageVariables from './PageVariables.vue'
 import ComponentProperties from './ComponentProperties.vue'
+import InstanceProperties from './InstanceProperties.vue'
 import AutoLayoutSection from './AutoLayoutSection.vue'
 import EffectsSection from './EffectsSection.vue'
 import ExportSection from './ExportSection.vue'
@@ -1024,6 +1025,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
       </section>
 
       <ComponentProperties v-if="!isMulti && node && (node.type === 'COMPONENT' || node.type === 'COMPONENT_SET')" />
+      <InstanceProperties v-if="!isMulti && node && node.type === 'INSTANCE'" />
       <EffectsSection />
       <ExportSection />
     </template>
