@@ -13,6 +13,7 @@ import { useInlineRename } from '@open-pencil/vue/editor/inline-rename'
 import { useEditorKeyboard } from '@open-pencil/vue/editor/keyboard'
 import { useMenuModel, type MenuEntry } from '@open-pencil/vue/editor/menu-model'
 import DesignPanel from './DesignPanel.vue'
+import ZoomMenu from './ZoomMenu.vue'
 import { copySelection, cutSelection, pasteSelection } from './clipboard'
 import { SHOW_CONTEXT_MENU, toContextEntries, type ContextMenuEntry } from './context'
 import { deletePageWithUndo, movePageWithUndo, renamePageWithUndo } from './pages'
@@ -198,6 +199,7 @@ const toolName = (t: Tool) => TOOL_NAMES[t]?.[0] ?? t
 const toolKey = (t: Tool) => TOOL_NAMES[t]?.[1] ?? ''
 
 const sidebarOpen = ref(true)
+const zoomMenuOpen = ref(false)
 const status = ref<'loading' | 'ready' | 'failed'>('loading')
 const error = ref('')
 
@@ -410,7 +412,8 @@ function finishRename(rename: (name: string) => void, e: Event) {
       </ToolbarRoot>
 
       <!-- Bottom-left: the top-right of a view is where other Obsidian plugins draw status overlays. -->
-      <button class="op-zoom" title="Zoom">{{ Math.round(editor.state.zoom * 100) }}%</button>
+      <button class="op-zoom" title="Zoom" @click="zoomMenuOpen = !zoomMenuOpen">{{ Math.round(editor.state.zoom * 100) }}%</button>
+      <ZoomMenu v-if="zoomMenuOpen" :editor="editor" @close="zoomMenuOpen = false" />
 
       <div v-if="readOnly" class="op-banner">
         OpenPencil can't write this file format. Run “Save as .fig” to keep your edits.

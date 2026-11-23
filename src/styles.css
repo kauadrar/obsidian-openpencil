@@ -443,6 +443,79 @@
   .op-shell .op-zoom {
     bottom: 170px;
   }
+  .op-shell .op-zoom-menu {
+    bottom: 202px;
+  }
+}
+.op-shell .op-zoom {
+  cursor: pointer;
+}
+.op-shell .op-zoom-menu {
+  position: absolute;
+  left: 28px;
+  bottom: 72px;
+  z-index: 20;
+  min-width: 210px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border-radius: 8px;
+  background: var(--op-bg-raised);
+  border: 1px solid var(--op-border);
+  box-shadow: var(--op-shadow);
+}
+.op-shell .op-zoom-input-row {
+  padding: 4px 6px;
+}
+.op-shell .op-zoom-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 5px;
+  border: 1px solid var(--op-border);
+  background: var(--op-bg);
+  color: var(--op-text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.op-shell .op-zoom-input:focus {
+  outline: none;
+  border-color: var(--op-accent);
+}
+.op-shell .op-zoom-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--op-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.op-shell .op-zoom-item:hover {
+  background: var(--op-hover);
+}
+.op-shell .op-zoom-item kbd {
+  margin-left: auto;
+  font: inherit;
+  font-size: 11px;
+  color: var(--op-text-muted);
+}
+.op-shell .op-zoom-check {
+  width: 12px;
+  flex: none;
+  text-align: center;
+  color: var(--op-accent);
+}
+.op-shell .op-zoom-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--op-border);
 }
 .op-shell .op-prop {
   display: flex;
