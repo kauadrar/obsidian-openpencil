@@ -4,6 +4,7 @@
 import { computed } from 'vue'
 import { useComponentProperties } from '@open-pencil/vue/controls/component-props'
 import { booleanToValue, splitOverrideControls, valueToBoolean } from './component-props'
+import { releaseCheckboxFocus } from './focus'
 
 const overrides = useComponentProperties()
 const split = computed(() => splitOverrideControls(overrides.controls.value))
@@ -39,7 +40,7 @@ const isMixed = (value: unknown): boolean => typeof value !== 'string'
         class="op-instance-prop-value"
         :checked="valueToBoolean(asText(c.value))"
         :aria-label="c.name"
-        @change="(e) => overrides.setValue(c.id, booleanToValue((e.target as HTMLInputElement).checked))"
+        @change="(e: Event) => { overrides.setValue(c.id, booleanToValue((e.target as HTMLInputElement).checked)); releaseCheckboxFocus(e) }"
       />
 
       <select

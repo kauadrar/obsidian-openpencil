@@ -11,6 +11,7 @@ import { useNodeProps } from '@open-pencil/vue/controls/node-props'
 import { ColorField, NumField } from './fields'
 import { EYE_ICON, EYE_OFF_ICON } from './icons'
 import BindableValueRow from './BindableValueRow.vue'
+import { releaseCheckboxFocus } from './focus'
 import { displayEffectType, SHADOW_BLEND_MODES, showsBehindTransparent, supportedEffectOptions } from './effects'
 
 const effects = useEditorPropertyList('effects')
@@ -99,7 +100,7 @@ const setAlpha = (i: number, e: Effect, a: number) => fx.updateColor(effects.act
               <input
                 type="checkbox"
                 :checked="showsBehindTransparent(effect)"
-                @change="(e: Event) => setShowBehind(i, (e.target as HTMLInputElement).checked)"
+                @change="(e: Event) => { setShowBehind(i, (e.target as HTMLInputElement).checked); releaseCheckboxFocus(e) }"
               />
               <span>Show behind transparent areas</span>
             </label>

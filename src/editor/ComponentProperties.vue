@@ -5,6 +5,7 @@
 import { computed, ref } from 'vue'
 import { useEditor } from '@open-pencil/vue'
 import { useComponentPropertyAuthoring } from '@open-pencil/vue/controls/component-props'
+import { releaseCheckboxFocus } from './focus'
 import {
   ADDABLE_PROPERTIES,
   booleanToValue,
@@ -109,7 +110,7 @@ function commitName(propertyId: string, ownerId: string, event: Event) {
           type="checkbox"
           :checked="valueToBoolean(row.property.defaultValue)"
           :disabled="!auth.editable.value"
-          @change="(e: Event) => auth.setDefault(row.property.ownerId, row.id, booleanToValue((e.target as HTMLInputElement).checked))"
+          @change="(e: Event) => { auth.setDefault(row.property.ownerId, row.id, booleanToValue((e.target as HTMLInputElement).checked)); releaseCheckboxFocus(e) }"
         />
         <span>Default</span>
       </label>
