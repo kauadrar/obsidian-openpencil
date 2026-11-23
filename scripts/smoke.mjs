@@ -643,6 +643,56 @@ try {
     check('Inline hex edits fill color and Undo reverts it',
       afterHex === 'FF5500' && undoneHex === initialHex,
       `${initialHex} -> ${afterHex} -> ${undoneHex}`)
+
+    // Spec 18: Solid / Gradient / Image fill tabs, gradient stops & on-canvas gradientEdit, image controls.
+    await page.locator('.op-swatch').first().click()
+    await page.locator('.op-fill-tabs').waitFor({ state: 'visible' })
+    const tabLabels = await page.locator('.op-fill-tab').allTextContents()
+    await page.locator('.op-fill-tab', { hasText: 'Gradient' }).click()
+    const gradInfo = await page.evaluate(() => {
+      const pop = document.querySelector('.op-cp-popover')
+      const subOpts = Array.from(pop?.querySelectorAll('.op-cp-select option') ?? []).map((o) => o.value)
+      const stops = pop?.querySelectorAll('.op-grad-stop').length ?? 0
+      const removeDisabled = pop?.querySelector('.op-grad-stop button[title="Remove gradient stop"]')?.hasAttribute('disabled') ?? false
+      return {
+        hasGradientEdit: !!window.smokeEditor.state.gradientEdit,
+        subOpts,
+        stops,
+        removeDisabled,
+      }
+    })
+    await page.locator('button[title="Add gradient stop"]').click()
+    const stopsAfterAdd = await page.locator('.op-grad-stop').count()
+    await page.locator('.op-fill-tab', { hasText: 'Image' }).click()
+    const imgInfo = await page.evaluate(() => {
+      const pop = document.querySelector('.op-cp-popover')
+      const modes = Array.from(pop?.querySelectorAll('.op-img-actions select option') ?? []).map((o) => o.value)
+      const adjustments = pop?.querySelectorAll('.op-img-adj-row').length ?? 0
+      return {
+        modes,
+        adjustments,
+        hasRotate: !!pop?.querySelector('button[title="Rotate 90°"]'),
+        hasChoose: !!pop?.querySelector('.op-img-actions .op-export-btn'),
+      }
+    })
+    await page.keyboard.press('Escape')
+    const gradEditCleared = await page.evaluate(() => window.smokeEditor.state.gradientEdit === null)
+    check('Fill picker has Solid, Gradient, Image tabs and Gradient sets on-canvas gradientEdit + min 2 stops',
+      tabLabels.map((t) => t.trim()).join(',') === 'Solid,Gradient,Image' &&
+      gradInfo.hasGradientEdit &&
+      gradInfo.subOpts.join(',') === 'GRADIENT_LINEAR,GRADIENT_RADIAL,GRADIENT_ANGULAR,GRADIENT_DIAMOND' &&
+      gradInfo.stops === 2 &&
+      gradInfo.removeDisabled &&
+      stopsAfterAdd === 3 &&
+      gradEditCleared,
+      JSON.stringify({ tabLabels, gradInfo, stopsAfterAdd, gradEditCleared }))
+    check('Image tab has Fill/Fit/Crop/Tile, Rotate 90°, Choose image, and 7 adjustments',
+      imgInfo.modes.join(',') === 'FILL,FIT,CROP,TILE' &&
+      imgInfo.adjustments === 7 &&
+      imgInfo.hasRotate &&
+      imgInfo.hasChoose,
+      JSON.stringify(imgInfo))
+    await page.keyboard.press(`${mod}+z`)
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
