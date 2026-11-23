@@ -1,5 +1,66 @@
 # Changelog
 
+## [0.3.0](https://github.com/kauadrar/obsidian-openpencil/compare/0.2.0...0.3.0) (2026-11-23)
+
+
+### Features
+
+* add in-plugin MCP server for desktop Obsidian ([7ce2576](https://github.com/kauadrar/obsidian-openpencil/commit/7ce25760ab50506d67b5520945d8a091ccb6b49e))
+* add in-plugin MCP server for desktop Obsidian ([dd5e516](https://github.com/kauadrar/obsidian-openpencil/commit/dd5e516b3fe6fe9b2d7d5812210d1c1e662b68e1))
+* add mobile diagnostics Notice and touch layer-tools fallback ([92f9532](https://github.com/kauadrar/obsidian-openpencil/commit/92f953239d61c7f89b548b60c9bdabd23ee04bf4))
+* add mobile preview page switcher sheet ([ce86eac](https://github.com/kauadrar/obsidian-openpencil/commit/ce86eac86ac84df065a44b31110deac63482c90c))
+* **assets:** add an Assets tab with drag and + insert ([7cabaf3](https://github.com/kauadrar/obsidian-openpencil/commit/7cabaf3ac572dc1c5a14c58fc8a9229e4a179452))
+* **assets:** collect and group local components by page ([ca8b26a](https://github.com/kauadrar/obsidian-openpencil/commit/ca8b26a03d86148195ddf4438c0c9daa1f3a0085))
+* **assets:** render component thumbnails through the PNG export path ([cc478ad](https://github.com/kauadrar/obsidian-openpencil/commit/cc478adf3192fa94bb338e3ce8ce50774b5d3057))
+* **assets:** show real component thumbnails in Assets rows ([ce5b909](https://github.com/kauadrar/obsidian-openpencil/commit/ce5b909e73593550653a8c44dfe86fc8f96edb66))
+* **components:** add a properties section to main components and sets ([55b7277](https://github.com/kauadrar/obsidian-openpencil/commit/55b7277a1e040d4af3c0c817736aeb48b083f71f))
+* **components:** pure helpers for property authoring and overrides ([c6908d9](https://github.com/kauadrar/obsidian-openpencil/commit/c6908d9439525bc21811c477f1bf4c85c7126dd1))
+* **components:** show overrides and variants on component instances ([bb75d9a](https://github.com/kauadrar/obsidian-openpencil/commit/bb75d9a173abc60bd6877cef2f12bddd84155325))
+* **design-panel:** bind number and colour fields to variables ([55d4d14](https://github.com/kauadrar/obsidian-openpencil/commit/55d4d1463cbbd9aed185457eec637eb9ffc7d183))
+* **effects:** add blend mode, show-behind and bindable shadow values ([8ce7ef7](https://github.com/kauadrar/obsidian-openpencil/commit/8ce7ef76e0b170c5963635dd54c0a6723c46a988))
+* **effects:** pure helpers for shadow and blur effect controls ([af77a26](https://github.com/kauadrar/obsidian-openpencil/commit/af77a26d9c6e0b6650ff0b607cb73c017e57a3e6))
+* **export:** free-text export scale with presets ([d6a9e1f](https://github.com/kauadrar/obsidian-openpencil/commit/d6a9e1fbe751640015b4a0954b566c2cd3526252))
+* **frames:** add a frame preset select for a selected frame ([9642d83](https://github.com/kauadrar/obsidian-openpencil/commit/9642d83f280c6b108ac856a60f35d480e2fcab4d))
+* **frames:** add frame preset table and resize matching ([88d6e90](https://github.com/kauadrar/obsidian-openpencil/commit/88d6e90fba5881e433e90afa56dd2be638fd3540))
+* **frames:** show a frame presets list while the Frame tool is active ([96f5385](https://github.com/kauadrar/obsidian-openpencil/commit/96f538590c7d6af3fbeb1bfdff4a4b7f4ffe25d5))
+* **icons:** add an Insert icon popover and a Detach icon menu entry ([0ba08c9](https://github.com/kauadrar/obsidian-openpencil/commit/0ba08c9ff87fa807303e3e2b68f4fca20c9b6d50))
+* **icons:** hide emoji sets from Insert icon results and the set filter ([69242e3](https://github.com/kauadrar/obsidian-openpencil/commit/69242e3872079587aaa6667cfa26fd1698161ec8))
+* **layers:** shift-click selects a range; click a selected row to rename ([8f411ca](https://github.com/kauadrar/obsidian-openpencil/commit/8f411ca7d5a6424cf9af21c0bfe61d36a58c9256))
+* lazy-load MCP server and enable mobile manifest (Phase 1) ([a57b8e0](https://github.com/kauadrar/obsidian-openpencil/commit/a57b8e0ce8afacecfd32af8be49c56d50be19383))
+* mobile read-only preview & lazy-loaded MCP (Phase 1) ([5e0e807](https://github.com/kauadrar/obsidian-openpencil/commit/5e0e807031627b28ce3328f24da93c2ed75857c1))
+* mobile read-only preview mode with touch pan/pinch/double-tap ([b5fb7cb](https://github.com/kauadrar/obsidian-openpencil/commit/b5fb7cb9ba9f85acea6aa30ede5ec073e5bdb766))
+* **settings:** add an Iconify import setting, on by default ([5235a02](https://github.com/kauadrar/obsidian-openpencil/commit/5235a021a674f84a69db7ae6e323d80196dc96ca))
+* **toolbar:** mark the current tool in flyouts and show shortcuts ([03c3add](https://github.com/kauadrar/obsidian-openpencil/commit/03c3add9ceca5dedb9e81bcf4645bdb55eb0ed13))
+* **typography:** font picker source badges (BUNDLED, system) ([25ed344](https://github.com/kauadrar/obsidian-openpencil/commit/25ed34406889468645cebf4813ea39fdce9078bc))
+* **variables:** group local variables by collection for pickers ([1b1b25b](https://github.com/kauadrar/obsidian-openpencil/commit/1b1b25b820c9523e1d801ce4a517a8f668be876e))
+
+
+### Bug Fixes
+
+* clear dirty state and autosave timer on close_document discard ([adef99e](https://github.com/kauadrar/obsidian-openpencil/commit/adef99e0df2f5e3f4cd6f25d41a8b9893be7623d))
+* collapse grid to 1-column full-bleed canvas in mobile preview and refit on resize ([6573408](https://github.com/kauadrar/obsidian-openpencil/commit/657340821fce23b09bde4b438ee9ef6e37722652))
+* **components:** add instance swap properties on the first other component ([bc2cf53](https://github.com/kauadrar/obsidian-openpencil/commit/bc2cf5343c65d3d2830be3dc54ffdbd82b4e7a43))
+* **components:** pick a component default for instance swap properties ([3201be6](https://github.com/kauadrar/obsidian-openpencil/commit/3201be6107b421604a941c9b0b75200ba48ba2f1))
+* **components:** undo a boolean override tick with Cmd/Ctrl+Z ([122cb37](https://github.com/kauadrar/obsidian-openpencil/commit/122cb37c0d04f2ca6c4bf0b32a86298608568e0f))
+* **design-panel:** anchor the Apply variable list to its field ([876339c](https://github.com/kauadrar/obsidian-openpencil/commit/876339c98d711cf7522ceb4edd4e503f3d9c44e6))
+* **effects:** show a reopened layer blur as Layer blur ([89a7982](https://github.com/kauadrar/obsidian-openpencil/commit/89a7982f5744169d0800f5bf5da1ccbbf3dbb7e8))
+* explicit headless undo error, close_document unsaved guard, and headless write log ([d2bbb1e](https://github.com/kauadrar/obsidian-openpencil/commit/d2bbb1ee3c62ce22a18ba7f4445b8a01cefcaf46))
+* **export:** clamp an export scale of 0 to 0.01 ([62908fa](https://github.com/kauadrar/obsidian-openpencil/commit/62908fa93dd72bd19d9836ab42c5fb93b25b4ac0))
+* **export:** show the scale presets as a select that applies at once ([981b273](https://github.com/kauadrar/obsidian-openpencil/commit/981b2738294a49b8d14458801bdefe85a8662f5d))
+* **icons:** decide Iconify reachability by probing it, not the set list ([fe1d555](https://github.com/kauadrar/obsidian-openpencil/commit/fe1d55556f10b663c758a7e330e5ca082ccd950d))
+* **icons:** hide icon results when Iconify is unreachable ([21671ee](https://github.com/kauadrar/obsidian-openpencil/commit/21671eef99352eb1838106501644d92f3ae3654d))
+* import MCP registration directly to avoid node:os in editor bundle ([70adae8](https://github.com/kauadrar/obsidian-openpencil/commit/70adae8ce90d4785819358080cdb26869b07e3a0))
+* register 3 vault doc tools without mcpRoot and add live MCP smoke script ([0ff4b48](https://github.com/kauadrar/obsidian-openpencil/commit/0ff4b48ff4b64bf848a06718c29dc439f715e901))
+* replace mobile page bottom sheet with top-left dropdown popover ([d6faa2e](https://github.com/kauadrar/obsidian-openpencil/commit/d6faa2e587fbc05bf94d82602733675273d8035b))
+* resolve B6 undo/redo, B7 http type, B8 guards, and vault doc behaviors ([eb16d17](https://github.com/kauadrar/obsidian-openpencil/commit/eb16d170cb777f4ace38632606d7ecb9f286627f))
+* resolve MCP tool dispatch, Buffer shim, and 12 document tools ([a0eb6bc](https://github.com/kauadrar/obsidian-openpencil/commit/a0eb6bc2f0f4ba7c2d2109b5b14d26e8c53801e2))
+* **smoke:** pass settings wrapper to update_settings in smoke-mcp.mjs ([bf9d3f2](https://github.com/kauadrar/obsidian-openpencil/commit/bf9d3f27489be95a181e65fec8760eb6b7b8a672))
+* **smoke:** run all MCP smoke steps before reporting failures ([c965f8b](https://github.com/kauadrar/obsidian-openpencil/commit/c965f8ba46dddcf004a1843259769692dbea27ab))
+* **smoke:** run undo-reverts-edit while document is open ([05ad7a6](https://github.com/kauadrar/obsidian-openpencil/commit/05ad7a6bc82248d66797b99601d6e8685385f10e))
+* **typography:** give the font picker its local font access and keep bundled fonts ([6562bcc](https://github.com/kauadrar/obsidian-openpencil/commit/6562bccfe5ce9832faa96db11bb665112535d8c0))
+* **typography:** remove GOOGLE and FONTSOURCE font badges ([bf87ec7](https://github.com/kauadrar/obsidian-openpencil/commit/bf87ec7d9446bd66291dd1ae2646076eb828f04d))
+* uniform swatch ring and auto-width icon-btn for text labels ([bb79a9c](https://github.com/kauadrar/obsidian-openpencil/commit/bb79a9c07a8818ef21b85c809eec44fd3cd4abf4))
+
 ## 0.2.0 highlights
 
 * **Design panel** on the right of the editor: position and size with min/max and aspect lock, constraints, auto layout, fills, strokes, blend mode, corner radii, typography, effects, export.
