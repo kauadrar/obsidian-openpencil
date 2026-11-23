@@ -1798,3 +1798,73 @@
   padding: 0;
   background: var(--op-hover);
 }
+
+/* Component properties (main component / set) */
+.op-shell .op-add-wrap {
+  position: relative;
+}
+.op-shell .op-add-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 4px;
+  min-width: 140px;
+  background: var(--op-bg);
+  border: 1px solid var(--op-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+.op-shell .op-add-item {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.op-shell .op-add-item:hover {
+  background: var(--op-hover);
+}
+.op-shell .op-component-prop {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 6px;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--op-border);
+}
+.op-shell .op-component-prop-name,
+.op-shell .op-component-prop-default {
+  box-sizing: border-box;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 11px;
+  color: inherit;
+  background: var(--op-hover);
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+.op-shell .op-component-prop-type {
+  grid-column: 2;
+  justify-self: end;
+  font-size: 10px;
+  color: var(--op-text-muted);
+  text-transform: capitalize;
+}
+.op-shell .op-component-prop-default {
+  grid-column: 1 / span 1;
+}
+.op-shell .op-component-prop-remove {
+  grid-row: 1 / span 2;
+  grid-column: 3;
+}
+.op-shell .op-component-props.is-readonly .op-component-prop-name,
+.op-shell .op-component-props.is-readonly .op-component-prop-default {
+  opacity: 0.6;
+}

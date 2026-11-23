@@ -28,6 +28,7 @@ import { ColorField, NumField } from './fields'
 import FillField from './FillField.vue'
 import BindableValueRow from './BindableValueRow.vue'
 import PageVariables from './PageVariables.vue'
+import ComponentProperties from './ComponentProperties.vue'
 import AutoLayoutSection from './AutoLayoutSection.vue'
 import EffectsSection from './EffectsSection.vue'
 import ExportSection from './ExportSection.vue'
@@ -1022,6 +1023,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
         </div>
       </section>
 
+      <ComponentProperties v-if="!isMulti && node && (node.type === 'COMPONENT' || node.type === 'COMPONENT_SET')" />
       <EffectsSection />
       <ExportSection />
     </template>
