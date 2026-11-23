@@ -21,6 +21,7 @@ import type { OkHCLControls } from '@open-pencil/vue/controls/color-model'
 import { useEditorCommands } from '@open-pencil/vue/editor/commands'
 import { AUTO_ARRANGE_GROUPS, type MenuEntry } from '@open-pencil/vue/editor/menu-model'
 import { ColorField, NumField } from './fields'
+import FillField from './FillField.vue'
 import AutoLayoutSection from './AutoLayoutSection.vue'
 import EffectsSection from './EffectsSection.vue'
 import ExportSection from './ExportSection.vue'
@@ -368,11 +369,13 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
         </div>
         <div v-if="fills.isMixed.value" class="op-prop-note">Click + to replace mixed fills</div>
         <div v-for="(fill, i) in fills.items.value" v-else :key="i" class="op-paint" :class="{ 'is-hidden': !fill.visible }">
-          <ColorField
-            v-if="fill.type === 'SOLID'"
-            :color="fill.color"
-            :opacity="fill.opacity"
+          <FillField
+            v-if="fill.type === 'SOLID' || fill.type.startsWith('GRADIENT_') || fill.type === 'IMAGE'"
+            :fill="fill"
+            :index="i"
+            :node-id="node?.id ?? null"
             :okhcl="fillOkHCL(i)"
+            @update="(next: Fill) => fills.actions.update(i, next)"
             @color="(c: Color) => setFillColor(i, c)"
             @opacity="(o: number) => fills.actions.patch(i, { opacity: o })"
           />

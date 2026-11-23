@@ -1060,3 +1060,132 @@
   color: inherit;
   cursor: pointer;
 }
+.op-cp-popover .op-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* Spec 18: Fill tabs (Solid / Gradient / Image), gradient stops, and image fill controls */
+.op-fill-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-bottom: 8px;
+  padding: 2px;
+  border-radius: 5px;
+  background: var(--background-modifier-hover, rgba(128, 128, 128, 0.12));
+}
+.op-fill-tab {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.op-fill-tab.is-active {
+  background: var(--background-primary, #fff);
+  color: var(--text-normal);
+  font-weight: 500;
+}
+.op-fill-kind-label {
+  display: flex;
+  align-items: center;
+  color: var(--op-text, var(--text-normal));
+  font-size: 11px;
+}
+.op-grad-bar {
+  position: relative;
+  width: 100%;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  margin: 4px 0;
+}
+.op-grad-handle {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+  border-radius: 3px;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+  padding: 0;
+  cursor: ew-resize;
+}
+.op-grad-handle.is-active {
+  box-shadow: 0 0 0 2px var(--interactive-accent, #7c3aed);
+}
+.op-grad-stops {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.op-grad-stop {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 24px;
+  align-items: center;
+  gap: 4px;
+}
+.op-grad-stop .op-color {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.op-grad-stop .op-hex {
+  min-width: 0;
+  width: 48px;
+  font-size: 11px;
+  border: none;
+  background: transparent;
+  color: inherit;
+}
+.op-grad-stop .op-color-opacity {
+  width: 38px;
+}
+.op-img-preview {
+  width: 100%;
+  height: 92px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.op-img-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.op-img-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.op-img-actions .op-export-btn {
+  flex: 1;
+  height: 24px;
+  font-size: 11px;
+}
+.op-img-adjustments {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.op-img-adj-row {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+.op-img-adj-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}

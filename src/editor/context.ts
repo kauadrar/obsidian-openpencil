@@ -30,6 +30,11 @@ export const NOTIFY: InjectionKey<Notify> = Symbol('openpencil-notify')
 
 export const DESIGN_NAME: InjectionKey<string> = Symbol('openpencil-design-name')
 
+/** Picks an image file from the host (e.g. Obsidian vault modal) for Image fills. */
+export type PickImage = () => Promise<File | null>
+
+export const PICK_IMAGE: InjectionKey<PickImage> = Symbol('openpencil-pick-image')
+
 /** Resolves Obsidian-internal drags (e.g. from the File Explorer) into File objects. */
 export type ResolveDropFiles = (dataTransfer: DataTransfer) => Promise<File[] | null>
 

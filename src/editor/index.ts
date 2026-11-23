@@ -8,17 +8,19 @@ import '@open-pencil/core/runtime-assets/install'
 import { createApp, defineComponent, h, provide, reactive, ref, type App as VueApp } from 'vue'
 import {
   NOTIFY,
+  PICK_IMAGE,
   RESOLVE_DROP_FILES,
   SHOW_CONTEXT_MENU,
   WRITE_EXPORT,
   type ContextMenuEntry,
   type Notify,
+  type PickImage,
   type ResolveDropFiles,
   type ShowContextMenu,
   type WriteExport,
 } from './context'
 
-export type { ContextMenuEntry, Notify, ResolveDropFiles, ShowContextMenu, WriteExport }
+export type { ContextMenuEntry, Notify, PickImage, ResolveDropFiles, ShowContextMenu, WriteExport }
 import { createDefaultEditorState, createDocumentGraph, createEditor, type Editor, type Tool } from '@open-pencil/core'
 import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
 import { setPageBackgrounds } from '@open-pencil/core/figma-api'
@@ -66,6 +68,8 @@ export interface MountOptions {
   notify?: Notify
   /** Resolves vault drags (e.g. from Obsidian's file explorer) into File objects. */
   resolveDropFiles?: ResolveDropFiles
+  /** Opens a vault image picker for Image fills; falls back to browser file input when omitted. */
+  pickImage?: PickImage
   /** Initial plugin preferences (snapping and zoom speed). */
   initialSettings?: OpenPencilSettings
 }
@@ -212,6 +216,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
       if (opts.showContextMenu) provide(SHOW_CONTEXT_MENU, opts.showContextMenu)
       if (opts.notify) provide(NOTIFY, opts.notify)
       if (opts.resolveDropFiles) provide(RESOLVE_DROP_FILES, opts.resolveDropFiles)
+      if (opts.pickImage) provide(PICK_IMAGE, opts.pickImage)
       return () =>
         h(Shell, {
           ref: shellRef,

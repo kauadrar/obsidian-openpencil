@@ -184,6 +184,32 @@ class DesignView extends FileView {
     const bytes = await this.app.vault.readBinary(file)
     await this.mounted.placeFiles([toDroppedFile(file, bytes)])
   }
+  private pickVaultImage(): Promise<File | null> {
+    return new Promise((resolve) => {
+      let chosen = false
+      const modal = new PlaceFileModal(
+        this.app,
+        async (file) => {
+          chosen = true
+          try {
+            const bytes = await this.app.vault.readBinary(file)
+            resolve(toDroppedFile(file, bytes))
+          } catch (e) {
+            reportError('Could not read image', e)
+            resolve(null)
+          }
+        },
+        RASTER_EXTENSIONS,
+        'Choose image from vault…',
+      )
+      modal.onClose = () => {
+        setTimeout(() => {
+          if (!chosen) resolve(null)
+        }, 0)
+      }
+      modal.open()
+    })
+  }
   private async resolveDropFiles(dt: DataTransfer): Promise<File[] | null> {
     const draggable = (this.app as unknown as { dragManager?: { draggable?: { type?: string; file?: unknown } } }).dragManager?.draggable
     if (draggable?.type === 'file' && draggable.file instanceof TFile) {
@@ -250,6 +276,7 @@ class DesignView extends FileView {
         showContextMenu: (entries, pos) => this.showContextMenu(entries, pos),
         notify: (msg) => new Notice(msg),
         resolveDropFiles: (dt) => this.resolveDropFiles(dt),
+        pickImage: () => this.pickVaultImage(),
         initialSettings: this.plugin.settings,
       })
       this.mounted.setActive(this.app.workspace.getActiveViewOfType(DesignView) === this)
@@ -401,7 +428,8 @@ class DesignView extends FileView {
   }
 }
 
-const PLACEABLE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif', 'svg'])
+const RASTER_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif'])
+const PLACEABLE_EXTENSIONS = new Set([...RASTER_EXTENSIONS, 'svg'])
 const MIME_BY_EXT: Record<string, string> = {
   png: 'image/png',
   jpg: 'image/jpeg',
@@ -468,12 +496,17 @@ class OpenPencilSettingTab extends PluginSettingTab {
 }
 
 class PlaceFileModal extends FuzzySuggestModal<TFile> {
-  constructor(app: App, private onPick: (file: TFile) => void) {
+  constructor(
+    app: App,
+    private onPick: (file: TFile) => void,
+    private extensions: Set<string> = PLACEABLE_EXTENSIONS,
+    placeholder = 'Place image or SVG from vault…',
+  ) {
     super(app)
-    this.setPlaceholder('Place image or SVG from vault…')
+    this.setPlaceholder(placeholder)
   }
   getItems(): TFile[] {
-    return this.app.vault.getFiles().filter((f) => PLACEABLE_EXTENSIONS.has(f.extension.toLowerCase()))
+    return this.app.vault.getFiles().filter((f) => this.extensions.has(f.extension.toLowerCase()))
   }
   getItemText(file: TFile): string {
     return file.path
