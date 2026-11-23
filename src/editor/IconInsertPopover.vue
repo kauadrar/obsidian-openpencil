@@ -7,6 +7,7 @@ import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka
 import type { Editor } from '@open-pencil/core'
 import { useIconSearch } from '@open-pencil/vue/controls/icon'
 import { iconify } from '@open-pencil/core/icons'
+import { isEmojiSet, setPrefixOf } from './icon-sets'
 
 const props = defineProps<{ editor: Editor }>()
 
@@ -52,13 +53,25 @@ const iconifyUnreachable = computed(() => reachable.value === false)
 const showResults = computed(() => online.value && reachable.value === true)
 // The set filter lists the catalogue's sets. When the catalogue is unavailable, it falls back to the sets
 // the current results come from, so the filter still narrows results.
+const categoryByPrefix = computed(() => new Map(search.sets.value.map((s) => [s.prefix, s.category] as const)))
+// Emoji sets are hidden: the popover keeps design icon sets only.
+const designNames = computed(() =>
+  search.visible.value.filter((n) => {
+    const prefix = setPrefixOf(n)
+    return !isEmojiSet(prefix, categoryByPrefix.value.get(prefix))
+  }),
+)
 const setChoices = computed<{ prefix: string; name: string }[]>(() => {
-  if (search.sets.value.length > 0) return search.sets.value.map((s) => ({ prefix: s.prefix, name: s.name }))
-  const prefixes = new Set(search.visible.value.map((n) => n.split(':')[0] ?? '').filter(Boolean))
+  if (search.sets.value.length > 0) {
+    return search.sets.value
+      .filter((s) => !isEmojiSet(s.prefix, s.category))
+      .map((s) => ({ prefix: s.prefix, name: s.name }))
+  }
+  const prefixes = new Set(designNames.value.map(setPrefixOf).filter(Boolean))
   return [...prefixes].map((prefix) => ({ prefix, name: prefix }))
 })
 const empty = computed(
-  () => showResults.value && !search.loading.value && search.query.value.trim() !== '' && search.visible.value.length === 0,
+  () => showResults.value && !search.loading.value && search.query.value.trim() !== '' && designNames.value.length === 0,
 )
 
 watch(open, (isOpen) => {
@@ -67,7 +80,7 @@ watch(open, (isOpen) => {
   void search.loadSets().catch(() => {})
 })
 watch(
-  () => search.visible.value,
+  () => designNames.value,
   (names) => search.want(names),
   { immediate: true },
 )
@@ -136,7 +149,7 @@ async function insert(name: string) {
 
         <div v-if="showResults" class="op-icon-grid" role="list">
           <button
-            v-for="name in search.visible.value"
+            v-for="name in designNames"
             :key="name"
             type="button"
             class="op-icon-cell"
