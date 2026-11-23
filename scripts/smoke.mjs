@@ -744,6 +744,25 @@ try {
       Array.isArray(dashAfterZero) && dashAfterZero.length === 0 &&
       strokeRes.cap === 'ROUND' && strokeRes.join === 'BEVEL' && strokeRes.top === 4,
       JSON.stringify({ ...strokeRes, dashAfterZero }))
+
+    // Spec 20: Blend mode (19 modes on frame) & independent corner radii (TL/TR/BL/BR).
+    await page.evaluate((id) => window.smokeEditor.select([id]), s8.frame)
+    const blendCount = await page.locator('select[aria-label="Blend mode"] option').count()
+    await page.locator('select[aria-label="Blend mode"]').selectOption('MULTIPLY')
+    await page.locator('button[title="Independent corner radii"]').click()
+    const tlInput = page.locator('.op-prop input').nth(0)
+    // Set TL via title selector
+    const tlField = page.locator('label[title="Top-left radius"] input')
+    await tlField.click()
+    await tlField.fill('12')
+    await tlField.press('Enter')
+    const spec20Res = await page.evaluate(() => {
+      const n = window.smokeEditor.getSelectedNode()
+      return { blendMode: n?.blendMode, independent: n?.independentCorners, tl: n?.topLeftRadius }
+    })
+    check('Blend mode has 19 modes on frame and independent corner radii sets TL',
+      blendCount === 19 && spec20Res.blendMode === 'MULTIPLY' && spec20Res.independent && spec20Res.tl === 12,
+      JSON.stringify({ blendCount, ...spec20Res }))
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
