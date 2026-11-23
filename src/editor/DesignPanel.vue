@@ -14,6 +14,8 @@ import { PositionControlsRoot } from '@open-pencil/vue/primitives/PositionContro
 import { ConstraintsControlRoot } from '@open-pencil/vue/primitives/ConstraintsControl'
 import type { ConstraintType } from '@open-pencil/scene-graph'
 import { useFontPicker } from '@open-pencil/vue/primitives/FontPicker'
+import type { FontFamilyOption } from '@open-pencil/core/text'
+import { fontSourceBadge } from './font-badges'
 import { TypographyControlsRoot } from '@open-pencil/vue/primitives/TypographyControls'
 import { useNodeProps } from '@open-pencil/vue/controls/node-props'
 import { useEditorPropertyList } from '@open-pencil/vue/controls/property-list'
@@ -55,14 +57,15 @@ const showContextMenu = inject(SHOW_CONTEXT_MENU, null)
 const hasSelection = computed(() => nodes.value.length > 0)
 const isText = computed(() => nodes.value.length > 0 && nodes.value.some((n) => n.type === 'TEXT'))
 
-const BUNDLED_FAMILIES: string[] = ['Inter']
+/** Fonts shipped with the plugin. */
+const BUNDLED_FONTS: FontFamilyOption[] = [{ family: 'Inter', source: 'bundled' }]
 
 let localFontState: 'unsupported' | 'prompt' | 'granted' | 'denied' =
   typeof window !== 'undefined' && 'queryLocalFonts' in window ? 'prompt' : 'unsupported'
 
 const localFontAccess = {
   state: () => localFontState,
-  load: async (): Promise<string[]> => {
+  load: async (): Promise<FontFamilyOption[]> => {
     if (typeof window === 'undefined' || !('queryLocalFonts' in window)) {
       localFontState = 'unsupported'
       return []
@@ -71,11 +74,11 @@ const localFontAccess = {
       const fonts = await (window as unknown as { queryLocalFonts: () => Promise<Array<{ family: string }>> }).queryLocalFonts()
       localFontState = 'granted'
       const seen = new Set<string>()
-      const result: string[] = []
+      const result: FontFamilyOption[] = []
       for (const f of fonts) {
         if (!seen.has(f.family)) {
           seen.add(f.family)
-          result.push(f.family)
+          result.push({ family: f.family, source: 'local' })
         }
       }
       return result
@@ -86,8 +89,8 @@ const localFontAccess = {
   },
 }
 
-async function listFontFamilies(): Promise<string[]> {
-  return BUNDLED_FAMILIES
+async function listFontFamilies(): Promise<FontFamilyOption[]> {
+  return BUNDLED_FONTS
 }
 
 const TYPE_NAMES: Record<string, string> = {
@@ -741,7 +744,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
                   >
                     <div class="op-font-picker-item">
                       <span class="op-font-picker-name" :style="{ fontFamily: f.family }">{{ f.family }}</span>
-                      <span class="op-font-picker-badge">{{ f.source }}</span>
+                      <span class="op-font-picker-badge">{{ fontSourceBadge(f.source) }}</span>
                     </div>
                   </div>
                   <div v-if="filteredFonts.length === 0" class="op-font-picker-empty">
