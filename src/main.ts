@@ -24,11 +24,13 @@ import { ensureEditorUnpacked } from './unpack'
 import { EditorLoadError, editorFailureText } from './editor-failure'
 import { loadEditorBlobs, type LoadedEditor } from './android/blob-loader'
 import { readEditorFiles } from './android/editor-files'
+import { withTimeout } from './timeout'
 import { createMcpRpcSender, type McpDocumentSummary, type McpHost } from './mcp/adapter'
 import type { McpServerController, McpServerStatus } from './mcp/server'
 
 export const VIEW_TYPE = 'openpencil-design'
 const EXTENSIONS = ['fig', 'pen'] as const
+const MOUNT_TIMEOUT_MS = 20000
 const AUTOSAVE_MS = 1500
 
 export default class OpenPencilPlugin extends Plugin {
@@ -133,7 +135,10 @@ export default class OpenPencilPlugin extends Plugin {
       this.editorModule = ensureEditorUnpacked(adapter, dir).then(async (editorDir) => {
         if (Platform.isAndroidApp) {
           // Android's WebView refuses module imports from the file URL, so the chunks load as blobs (see src/android).
-          const loaded = loadEditorBlobs(await readEditorFiles(adapter, editorDir))
+          const files = await readEditorFiles(adapter, editorDir)
+          console.info(`[openpencil] android: read ${files.length} editor files from ${editorDir}`)
+          const loaded = loadEditorBlobs(files)
+          console.info('[openpencil] android: editor chunks loaded as blobs')
           this.editorBlobs = loaded
           return import(/* @vite-ignore */ loaded.entryUrl) as Promise<typeof EditorModule>
         }
@@ -546,7 +551,8 @@ class DesignView extends FileView {
       const [mod, data] = await Promise.all([this.plugin.loadEditor(), this.app.vault.readBinary(file)])
       if (this.host !== host) return // another file was opened meanwhile
       loading.remove()
-      this.mounted = await mod.mountEditor(host, {
+      console.info(`[openpencil] mounting ${file.name}`)
+      const mounting = mod.mountEditor(host, {
         data: new Uint8Array(data),
         fileName: file.name,
         extension: file.extension as EditorModule.DesignExtension,
@@ -565,6 +571,11 @@ class DesignView extends FileView {
         pickImage: () => this.pickVaultImage(),
         initialSettings: this.plugin.settings,
       })
+      // On Android a mount that never settles left the view blank with no error, so it gets a limit there.
+      this.mounted = Platform.isAndroidApp
+        ? await withTimeout(mounting, MOUNT_TIMEOUT_MS, `the editor did not start within ${MOUNT_TIMEOUT_MS / 1000} seconds`)
+        : await mounting
+      console.info(`[openpencil] mounted ${file.name}`)
       this.mounted.setActive(this.app.workspace.getActiveViewOfType(DesignView) === this)
     } catch (e) {
       loading.setText('')

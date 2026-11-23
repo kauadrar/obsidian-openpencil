@@ -50,16 +50,14 @@ export function installBlobShim(map: Record<string, string>): void {
     const u = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
     return realFetch(isOp(u) ? blobOf(u) : input, init)
   }) as typeof fetch
+  // The editor's workers are refused, so the SDK runs their work on the main thread: it catches a worker that will
+  // not start and falls back. A blob worker that starts silently on a device would leave the editor waiting forever.
   const RealWorker = globalThis.Worker
   if (RealWorker) {
     globalThis.Worker = class extends RealWorker {
       constructor(url: string | URL, options?: WorkerOptions) {
-        const s = String(url)
-        // The worker's own realm needs the shims too: a bootstrap module installs them, then runs the chunk.
-        const bootUrl = isOp(s)
-          ? URL.createObjectURL(new Blob([`(${installBlobShim.toString()})(${JSON.stringify(map)});await import(${JSON.stringify(blobOf(s))});`], { type: 'text/javascript' }))
-          : url
-        super(bootUrl, options)
+        if (isOp(String(url))) throw new Error('Editor workers are unavailable on Android; the editor runs on the main thread')
+        super(url, options)
       }
     } as unknown as typeof Worker
   }

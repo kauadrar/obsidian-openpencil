@@ -53,6 +53,8 @@ test('the editor loads from blob URLs in an opaque-origin frame, renders a .fig 
             const { loadEditorBlobs } = await import(URL.createObjectURL(new Blob([e.data.loader], { type: 'text/javascript' })))
             const srcs = e.data.files.map((f) => (f.text !== undefined ? f : { path: f.path, bytes: bytes(f.b64) }))
             const loaded = loadEditorBlobs(srcs)
+            // The editor's own workers are refused, so the SDK runs their work on the main thread.
+            out.workersRefused = (() => { try { new Worker('op-blob:/chunks/x.js'); return false } catch (err) { return true } })()
             const mod = await import(loaded.entryUrl)
             const data = await mod.createBlankFig('Test')
             const m = await mod.mountEditor(document.getElementById('host'), { data, fileName: 'test.fig', extension: 'fig', onChange() {}, onSaveRequest() {} })
@@ -70,6 +72,7 @@ test('the editor loads from blob URLs in an opaque-origin frame, renders a .fig 
       document.body.appendChild(frame)
     }), { files, loader })
     assert.equal(result.origin, 'null')
+    assert.equal(result.workersRefused, true)
     assert.equal(result.ok, true, result.error)
     assert.ok(result.layers > 0)
     assert.ok(result.saved > 0)
