@@ -2,6 +2,8 @@
 import { computed, inject, onBeforeUnmount, ref, watch } from 'vue'
 import type { Fill, ImageFilters } from '@open-pencil/scene-graph'
 import type { Color } from '@open-pencil/scene-graph/primitives'
+import { editedGradientLayout } from '@open-pencil/core'
+import { hitTestGradientHandles } from '@open-pencil/core/geometry'
 import { useEditor } from '@open-pencil/vue'
 import { pressAnswersEyedropper } from '@open-pencil/vue/canvas/eyedropper'
 import type { OkHCLControls } from '@open-pencil/vue/controls/color-model'
@@ -90,7 +92,18 @@ function onOpenChange(open: boolean) {
 }
 
 function keepOpen(event: PointerEvent): boolean {
-  return pressAnswersEyedropper(editor, event)
+  if (pressAnswersEyedropper(editor, event)) return true
+  if (!editor.state.gradientEdit) return false
+  const canvas = event.target instanceof HTMLCanvasElement ? event.target : null
+  if (!canvas) return false
+  const rect = canvas.getBoundingClientRect()
+  const layout = editedGradientLayout(editor.graph, editor.state.gradientEdit, {
+    panX: editor.state.panX,
+    panY: editor.state.panY,
+    zoom: editor.state.zoom,
+  })
+  if (!layout) return false
+  return hitTestGradientHandles(layout, { x: event.clientX - rect.left, y: event.clientY - rect.top }) !== null
 }
 
 function emitSolidColor(next: Color) {
@@ -344,13 +357,13 @@ function updateStopColor(index: number, c: Color, a: number, updateFill: (f: Fil
                       :max="100"
                       :digits="0"
                       :value="Math.round(stop.position * 100)"
-                      @commit="(v) => g.actions.updateStopPosition(idx, v / 100)"
+                      @commit="(v) => g.actions.updateStopPosition(idx, v)"
                     />
                     <ColorField
                       :color="{ ...stop.color, a: 1 }"
                       :opacity="stop.color.a"
                       @color="(c) => updateStopColor(idx, c, stop.color.a, (next) => emit('update', next))"
-                      @opacity="(o) => g.actions.updateStopOpacity(idx, o)"
+                      @opacity="(o) => g.actions.updateStopOpacity(idx, o * 100)"
                     />
                     <button
                       type="button"
