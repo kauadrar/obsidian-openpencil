@@ -298,6 +298,73 @@ try {
     }
     await page.locator('.op-page').first().click({ button: 'right' })
     check('Page Delete is disabled when only 1 page remains', await page.evaluate(() => window.smokeLastMenu?.entries.find((e) => e.label === 'Delete')?.disabled === true))
+
+    // Spec 08: flips, rotate 90, ignore auto layout, clip content, multi-selection header/booleans/arrange/mixed/selection colors.
+    const s8 = await page.evaluate(() => {
+      const ed = window.smokeEditor
+      const pageId = ed.state.currentPageId
+      const frame = ed.graph.createNode('FRAME', pageId, {
+        name: 'AL Frame', x: 10, y: 10, width: 200, height: 200, layoutMode: 'VERTICAL', clipsContent: false,
+      })
+      const child = ed.graph.createNode('RECTANGLE', frame.id, {
+        name: 'AL Child', x: 0, y: 0, width: 50, height: 50,
+        fills: [{ type: 'SOLID', color: { r: 1, g: 0, b: 0, a: 1 }, opacity: 1, visible: true, blendMode: 'NORMAL' }],
+      })
+      const other = ed.graph.createNode('RECTANGLE', pageId, {
+        name: 'Other', x: 300, y: 50, width: 80, height: 80,
+        fills: [{ type: 'SOLID', color: { r: 0, g: 1, b: 0, a: 1 }, opacity: 1, visible: true, blendMode: 'NORMAL' }],
+      })
+      const txt = ed.graph.createNode('TEXT', pageId, { name: 'S8 Text', x: 400, y: 50, width: 60, height: 20, text: 'Hi' })
+      ed.select([frame.id])
+      return { frame: frame.id, child: child.id, other: other.id, txt: txt.id }
+    })
+
+    // Clip content on frame
+    await page.locator('.op-checkbox', { hasText: 'Clip content' }).locator('input').click()
+    check('Clip content toggles clipsContent on frame', await page.evaluate((id) => window.smokeEditor.graph.getNode(id)?.clipsContent === true, s8.frame))
+
+    // Flip and Rotate 90 on rectangle
+    await page.evaluate((id) => window.smokeEditor.select([id]), s8.other)
+    await page.click('button[title^="Flip horizontal"]')
+    check('Flip horizontal button flips layer', await page.evaluate((id) => window.smokeEditor.graph.getNode(id)?.flipX === true, s8.other))
+    await page.click('button[title="Rotate 90°"]')
+    check('Rotate 90° button rotates layer', await page.evaluate((id) => window.smokeEditor.graph.getNode(id)?.rotation === 90, s8.other))
+    await page.keyboard.press(`${mod}+z`)
+    await page.keyboard.press(`${mod}+z`)
+    check('Undo reverts rotate and flip', await page.evaluate((id) => {
+      const n = window.smokeEditor.graph.getNode(id)
+      return n?.rotation === 0 && n?.flipX === false
+    }, s8.other))
+
+    // Ignore auto layout on auto-layout child
+    await page.evaluate((id) => window.smokeEditor.select([id]), s8.child)
+    const hadIgnoreBtn = await page.locator('.op-ignore-layout').count() === 1
+    await page.click('.op-ignore-layout')
+    const nowIgnores = await page.evaluate((id) => window.smokeEditor.graph.getNode(id)?.layoutPositioning === 'ABSOLUTE', s8.child)
+    check('Ignore auto layout toggles child out of flow', hadIgnoreBtn && nowIgnores)
+
+    // Multi-selection: "N selected", Mixed, Boolean ops, Arrange menu, Typography on mixed selection, Selection colors.
+    await page.evaluate((ids) => window.smokeEditor.select([ids.other, ids.txt]), s8)
+    const multiUi = await page.evaluate(() => ({
+      title: document.querySelector('.op-prop-title span')?.textContent,
+      wVal: document.querySelector('.op-design label[title=""] input')?.value ?? [...document.querySelectorAll('.op-design .op-field')].find((l) => l.querySelector('.op-field-label')?.textContent === 'W')?.querySelector('input')?.value,
+      hasType: [...document.querySelectorAll('.op-design .op-prop-head')].some((h) => h.textContent?.includes('Typography')),
+      hasSelColors: [...document.querySelectorAll('.op-design .op-prop-head')].some((h) => h.textContent?.includes('Selection colors')),
+    }))
+    check('Multi-selection shows N selected, Mixed width, Typography, Selection colors',
+      multiUi.title === '2 selected' && multiUi.wVal === 'Mixed' && multiUi.hasType && multiUi.hasSelColors)
+
+    await page.click('button[title="Boolean operations"]')
+    check('Boolean ops menu opens with Union and Flatten', await page.evaluate(() => {
+      const labels = (window.smokeLastMenu?.entries ?? []).filter((e) => !e.separator).map((e) => e.label)
+      return labels.includes('Union selection') && labels.includes('Flatten')
+    }))
+
+    await page.click('button[title="Arrange"]')
+    check('Arrange menu opens with Tidy up, Distribute, Pack, Auto arrange', await page.evaluate(() => {
+      const labels = (window.smokeLastMenu?.entries ?? []).filter((e) => !e.separator).map((e) => e.label)
+      return labels.includes('Tidy up') && labels.includes('Auto arrange')
+    }))
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
