@@ -1,10 +1,8 @@
 import { extractFigThumbnailFromReader, type FigRangeReader } from '@open-pencil/fig'
-import { RangeSetBuilder, StateField, type EditorState } from '@codemirror/state'
-import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view'
+import { ViewPlugin, type EditorView, type PluginValue } from '@codemirror/view'
 import { editorInfoField, editorLivePreviewField, MarkdownRenderChild, TFile, type App, type MarkdownPostProcessorContext } from 'obsidian'
 
 const EMBED_EXTENSIONS = new Set(['fig', 'pen'])
-const EMBED_LINK_RE = /!\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g
 
 interface CacheEntry {
   mtime: number
@@ -176,83 +174,109 @@ export function resolveDesignEmbed(app: App, rawSrc: string, sourcePath: string)
   return EMBED_EXTENSIONS.has(target.extension.toLowerCase()) ? target : null
 }
 
+/**
+ * Replaces an `.internal-embed` element's contents with our `.openpencil-embed` preview and
+ * re-applies if Obsidian's async `file-embed` loader overwrites its children afterward.
+ */
+function enhanceInternalEmbed(
+  app: App,
+  manager: DesignEmbedManager,
+  embedEl: HTMLElement,
+  sourcePath: string,
+): (() => void) | null {
+  const src = embedEl.getAttribute('src')
+  if (!src) return null
+  const file = resolveDesignEmbed(app, src, sourcePath)
+  if (!file) return null
+
+  let unmount: (() => void) | null = null
+  let mounting = false
+
+  const apply = () => {
+    if (mounting) return
+    if (embedEl.querySelector(':scope > .openpencil-embed')) return
+    mounting = true
+    try {
+      unmount?.()
+      embedEl.empty()
+      const host = embedEl.createDiv()
+      unmount = manager.mountEmbed(host, file)
+    } finally {
+      mounting = false
+    }
+  }
+
+  apply()
+
+  const mo = new MutationObserver(() => apply())
+  mo.observe(embedEl, { childList: true })
+
+  return () => {
+    mo.disconnect()
+    unmount?.()
+    unmount = null
+  }
+}
+
 /** Reading View markdown post-processor for `![[design.fig]]` and `![[design.pen]]`. */
 export function processDesignEmbeds(app: App, manager: DesignEmbedManager, el: HTMLElement, ctx: MarkdownPostProcessorContext): void {
   const embeds = el.matches('.internal-embed') ? [el] : Array.from(el.querySelectorAll<HTMLElement>('.internal-embed'))
   for (const embedEl of embeds) {
-    const src = embedEl.getAttribute('src')
-    if (!src) continue
-    const file = resolveDesignEmbed(app, src, ctx.sourcePath)
-    if (!file) continue
-    const host = embedEl.createDiv()
-    embedEl.empty()
-    embedEl.appendChild(host)
-    const cleanup = manager.mountEmbed(host, file)
-    const child = new MarkdownRenderChild(host)
+    const cleanup = enhanceInternalEmbed(app, manager, embedEl, ctx.sourcePath)
+    if (!cleanup) continue
+    const child = new MarkdownRenderChild(embedEl)
     child.onunload = cleanup
     ctx.addChild(child)
   }
 }
 
-class DesignEmbedWidget extends WidgetType {
-  private cleanup: (() => void) | null = null
-
-  constructor(
-    private file: TFile,
-    private manager: DesignEmbedManager,
-  ) {
-    super()
-  }
-
-  override eq(other: DesignEmbedWidget): boolean {
-    return this.file.path === other.file.path
-  }
-
-  toDOM(): HTMLElement {
-    const el = document.createElement('div')
-    this.cleanup = this.manager.mountEmbed(el, this.file)
-    return el
-  }
-
-  override destroy(): void {
-    this.cleanup?.()
-    this.cleanup = null
-  }
-}
-
-function buildLivePreviewDecorations(app: App, manager: DesignEmbedManager, state: EditorState): DecorationSet {
-  if (!state.field(editorLivePreviewField, false)) return Decoration.none
-  const sourcePath = state.field(editorInfoField, false)?.file?.path ?? ''
-  const selection = state.selection.main
-  const builder = new RangeSetBuilder<Decoration>()
-  const text = state.doc.toString()
-  EMBED_LINK_RE.lastIndex = 0
-  let match: RegExpExecArray | null
-  while ((match = EMBED_LINK_RE.exec(text)) !== null) {
-    const from = match.index
-    const to = from + match[0].length
-    if (selection.from <= to && selection.to >= from) continue
-    const file = resolveDesignEmbed(app, match[1] ?? '', sourcePath)
-    if (!file) continue
-    builder.add(from, to, Decoration.replace({ widget: new DesignEmbedWidget(file, manager) }))
-  }
-  return builder.finish()
-}
-
-/** CodeMirror 6 Live Preview extension for `.fig`/`.pen` embeds. */
+/** CodeMirror 6 Live Preview extension that replaces Obsidian's generic `.internal-embed` cards for `.fig`/`.pen`. */
 export function createDesignEmbedExtension(app: App, manager: DesignEmbedManager) {
-  return StateField.define<DecorationSet>({
-    create(state) {
-      return buildLivePreviewDecorations(app, manager, state)
-    },
-    update(decorations, tr) {
-      if (tr.docChanged || tr.selection || tr.reconfigured) {
-        return buildLivePreviewDecorations(app, manager, tr.state)
+  return ViewPlugin.fromClass(
+    class implements PluginValue {
+      private cleanups = new Map<HTMLElement, () => void>()
+      private mo: MutationObserver
+
+      constructor(private view: EditorView) {
+        this.mo = new MutationObserver(() => this.scan())
+        this.mo.observe(this.view.contentDOM, { childList: true, subtree: true })
+        this.scan()
       }
-      return decorations
+
+      update(): void {
+        this.scan()
+      }
+
+      private scan(): void {
+        const isLivePreview = this.view.state.field(editorLivePreviewField, false)
+        if (!isLivePreview) {
+          this.clearAll()
+          return
+        }
+        const sourcePath = this.view.state.field(editorInfoField, false)?.file?.path ?? ''
+        const active = new Set(this.view.contentDOM.querySelectorAll<HTMLElement>('.internal-embed'))
+        for (const [el, cleanup] of this.cleanups) {
+          if (!active.has(el)) {
+            cleanup()
+            this.cleanups.delete(el)
+          }
+        }
+        for (const el of active) {
+          if (this.cleanups.has(el)) continue
+          const cleanup = enhanceInternalEmbed(app, manager, el, sourcePath)
+          if (cleanup) this.cleanups.set(el, cleanup)
+        }
+      }
+
+      private clearAll(): void {
+        for (const cleanup of this.cleanups.values()) cleanup()
+        this.cleanups.clear()
+      }
+
+      destroy(): void {
+        this.mo.disconnect()
+        this.clearAll()
+      }
     },
-    provide(field) {
-      return EditorView.decorations.from(field)
-    },
-  })
+  )
 }
