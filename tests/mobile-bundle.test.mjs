@@ -153,3 +153,10 @@ test('dist/main.js embedded editor payload contains is-preview and op-preview-pa
   assert.ok(editorJs.includes('is-preview'), 'editor.js must contain is-preview')
   assert.ok(editorJs.includes('op-preview-page'), 'editor.js must contain op-preview-page')
 })
+
+test('preview page popover stays above bottom 120px of viewport for 1, 5, and 20 pages', () => {
+  const css = fs.readFileSync(path.resolve(__dirname, '../src/styles.css'), 'utf8')
+  assert.ok(css.includes('max-height: min(50%, calc(100% - 180px))'), 'popover must cap height above bottom 120px')
+  assert.ok(css.includes('overflow-y: auto'), 'popover must scroll when many pages')
+  assert.ok(!css.includes('align-items: flex-end'), 'popover must not be a bottom sheet')
+})
