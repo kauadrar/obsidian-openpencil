@@ -9,11 +9,13 @@ import { ToolbarRoot } from '@open-pencil/vue/primitives/Toolbar'
 import { PageListRoot } from '@open-pencil/vue/primitives/PageList'
 import { LayerTreeRoot, LayerTreeItem } from '@open-pencil/vue/primitives/LayerTree'
 import { formatShortcut } from '@open-pencil/vue/editor/commands'
+import { useInlineRename } from '@open-pencil/vue/editor/inline-rename'
 import { useEditorKeyboard } from '@open-pencil/vue/editor/keyboard'
 import { useMenuModel, type MenuEntry } from '@open-pencil/vue/editor/menu-model'
 import DesignPanel from './DesignPanel.vue'
 import { copySelection, cutSelection, pasteSelection } from './clipboard'
 import { SHOW_CONTEXT_MENU, type ContextMenuEntry } from './context'
+import { deletePageWithUndo, movePageWithUndo, renamePageWithUndo } from './pages'
 import { createAppShortcuts } from './shortcuts'
 import {
   CHEVRON_DOWN_ICON,
@@ -113,6 +115,62 @@ function onLayerContextMenu(nodeId: string, event: MouseEvent) {
   buildContextMenu(event)
 }
 
+const pageRename = useInlineRename((pageId, name) => renamePageWithUndo(props.editor, pageId, name))
+
+function onPageClick(pageId: string, pageName: string, currentPageId: string, divider: boolean, switchPage: (id: string) => void) {
+  if (pageRename.editingId.value === pageId || divider) return
+  if (pageId === currentPageId) pageRename.start(pageId, pageName)
+  else switchPage(pageId)
+}
+
+function onPageContextMenu(pageId: string, pageName: string, pageCount: number, event: MouseEvent) {
+  if (!showContextMenu) return
+  showContextMenu(
+    [
+      { label: 'Rename', action: () => pageRename.start(pageId, pageName) },
+      { label: 'Delete', disabled: pageCount <= 1, action: () => deletePageWithUndo(props.editor, pageId) },
+    ],
+    { x: event.clientX, y: event.clientY },
+  )
+}
+
+const dragPageId = ref<string | null>(null)
+const pageDrop = ref<{ id: string; position: 'above' | 'below' } | null>(null)
+
+function onPageDragStart(pageId: string, event: DragEvent) {
+  dragPageId.value = pageId
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', pageId)
+  }
+}
+
+function onPageDragOver(pageId: string, event: DragEvent) {
+  if (!dragPageId.value || dragPageId.value === pageId) return
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const position = event.clientY < rect.top + rect.height / 2 ? 'above' : 'below'
+  pageDrop.value = { id: pageId, position }
+}
+
+function onPageDrop(targetId: string) {
+  const fromId = dragPageId.value
+  const drop = pageDrop.value
+  clearPageDrag()
+  if (!fromId || !drop || fromId === targetId) return
+  const pages = props.editor.graph.getPages()
+  const fromIndex = pages.findIndex((p) => p.id === fromId)
+  const targetIndex = pages.findIndex((p) => p.id === targetId)
+  if (fromIndex === -1 || targetIndex === -1) return
+  const rawIndex = drop.position === 'above' ? targetIndex : targetIndex + 1
+  const nextIndex = rawIndex > fromIndex ? rawIndex - 1 : rawIndex
+  movePageWithUndo(props.editor, fromId, nextIndex)
+}
+
+function clearPageDrag() {
+  dragPageId.value = null
+  pageDrop.value = null
+}
+
 /** An inline 16×16 stroke icon. */
 const Icon = defineComponent({
   props: { svg: { type: String, required: true }, size: { type: Number, default: 16 } },
@@ -189,7 +247,7 @@ function finishRename(rename: (name: string) => void, e: Event) {
       </header>
 
       <section class="op-section op-pages">
-        <PageListRoot v-slot="{ pages, currentPageId, actions }">
+        <PageListRoot v-slot="{ pages, currentPageId, isDivider, actions }">
           <div class="op-section-head">
             <span>Pages</span>
             <button class="op-icon-btn" title="Add page" @click="actions.add()">
@@ -199,16 +257,42 @@ function finishRename(rename: (name: string) => void, e: Event) {
             </button>
           </div>
           <div class="op-list">
-            <button
+            <div
               v-for="page in pages"
               :key="page.id"
-              class="op-row"
-              :class="{ 'is-active': page.id === currentPageId }"
-              @click="actions.switch(page.id)"
+              class="op-row op-page"
+              :class="{
+                'is-active': page.id === currentPageId && !isDivider(page),
+                'is-divider': isDivider(page) && pageRename.editingId.value !== page.id,
+                'is-dragging': dragPageId === page.id,
+                [`drop-reorder-${pageDrop?.position}`]: pageDrop?.id === page.id,
+              }"
+              draggable="true"
+              @click="onPageClick(page.id, page.name, currentPageId, isDivider(page), actions.switch)"
+              @dblclick="pageRename.start(page.id, page.name)"
+              @contextmenu.prevent.stop="onPageContextMenu(page.id, page.name, pages.length, $event)"
+              @dragstart="onPageDragStart(page.id, $event)"
+              @dragover.prevent="onPageDragOver(page.id, $event)"
+              @drop.prevent="onPageDrop(page.id)"
+              @dragend="clearPageDrag"
             >
-              <Icon :svg="PAGE_ICON" :size="14" />
-              <span class="op-row-label">{{ page.name }}</span>
-            </button>
+              <template v-if="pageRename.editingId.value === page.id">
+                <Icon :svg="PAGE_ICON" :size="14" />
+                <input
+                  :ref="(el) => el && pageRename.focusInput(el as HTMLInputElement)"
+                  class="op-rename"
+                  :value="page.name"
+                  @click.stop
+                  @keydown.stop="pageRename.onKeydown"
+                  @blur="pageRename.commit(page.id, $event)"
+                />
+              </template>
+              <span v-else-if="isDivider(page)" class="op-page-divider" />
+              <template v-else>
+                <Icon :svg="PAGE_ICON" :size="14" />
+                <span class="op-row-label">{{ page.name }}</span>
+              </template>
+            </div>
           </div>
         </PageListRoot>
       </section>
