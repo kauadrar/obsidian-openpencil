@@ -143,3 +143,45 @@ test('MCP tool drift test: @open-pencil/mcp tools match @open-pencil/core ALL_TO
   }
   assert.ok(descriptors.length > 0, 'Expected @open-pencil/mcp to expose tool descriptors')
 })
+
+test('MCP initialize succeeds and returns mcp-session-id', async () => {
+  const token = generateMcpToken()
+  const controller = new McpServerController({
+    sendRPC: async () => ({ ok: true }),
+    loadRegisterTools: async () => (mcpServer, sendRPC) => {
+      registerTools(mcpServer, {
+        policy: { disabledTools: [], allowEval: false, scope: 'document' },
+        sendRPC,
+      })
+    },
+  })
+  const port = 39892
+  const started = await controller.start(port, token)
+  assert.equal(started.running, true)
+
+  try {
+    const initRes = await fetch(`http://127.0.0.1:${port}/mcp`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+        authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-03-26',
+          capabilities: {},
+          clientInfo: { name: 'bundle-test', version: '1' },
+        },
+      }),
+    })
+    assert.equal(initRes.status, 200)
+    const sessionId = initRes.headers.get('mcp-session-id')
+    assert.ok(sessionId, 'Expected mcp-session-id header from initialize')
+  } finally {
+    await controller.stop()
+  }
+})
