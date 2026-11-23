@@ -1,7 +1,7 @@
 {
   "id": "openpencil-editor",
   "name": "OpenPencil Editor",
-  "version": "0.2.0-beta.3",
+  "version": "0.2.0-beta.4",
   "minAppVersion": "1.5.0",
   "description": "Open and edit .fig and .pen design files in your vault with the OpenPencil design editor. Unofficial community plugin.",
   "author": "kauadrar",
