@@ -92,9 +92,10 @@ function onOpenChange(open: boolean) {
 }
 
 function keepOpen(event: PointerEvent): boolean {
-  if (pressAnswersEyedropper(editor, event)) return true
+  const pe = (event as unknown as { detail?: { originalEvent?: PointerEvent } }).detail?.originalEvent ?? event
+  if (pressAnswersEyedropper(editor, pe)) return true
   if (!editor.state.gradientEdit) return false
-  const canvas = event.target instanceof HTMLCanvasElement ? event.target : null
+  const canvas = pe.target instanceof HTMLCanvasElement ? pe.target : null
   if (!canvas) return false
   const rect = canvas.getBoundingClientRect()
   const layout = editedGradientLayout(editor.graph, editor.state.gradientEdit, {
@@ -103,7 +104,7 @@ function keepOpen(event: PointerEvent): boolean {
     zoom: editor.state.zoom,
   })
   if (!layout) return false
-  return hitTestGradientHandles(layout, { x: event.clientX - rect.left, y: event.clientY - rect.top }) !== null
+  return hitTestGradientHandles(layout, { x: pe.clientX - rect.left, y: pe.clientY - rect.top }) !== null
 }
 
 function emitSolidColor(next: Color) {
