@@ -59,29 +59,72 @@ function toggleAspectLock() {
     }
   })
 }
+function applyAxisConstraint(
+  pos: number,
+  size: number,
+  oldParent: number,
+  newParent: number,
+  constraint: string,
+): { pos: number; size: number } {
+  const delta = newParent - oldParent
+  if (delta === 0) return { pos, size }
+  switch (constraint) {
+    case 'MAX':
+      return { pos: pos + delta, size }
+    case 'CENTER':
+      return { pos: pos + delta / 2, size }
+    case 'STRETCH':
+      return { pos, size: Math.max(0.01, size + delta) }
+    case 'SCALE': {
+      const ratio = oldParent > 0 ? newParent / oldParent : 1
+      return { pos: pos * ratio, size: Math.max(0.01, size * ratio) }
+    }
+    default:
+      return { pos, size }
+  }
+}
+
+function resizeNodeWithConstraints(n: (typeof nodes.value)[number], nextW: number, nextH: number, label: string) {
+  const oldW = n.width
+  const oldH = n.height
+  editor.updateNodeWithUndo(n.id, { width: nextW, height: nextH }, label)
+  if (n.type !== 'FRAME' && n.type !== 'COMPONENT' && n.type !== 'INSTANCE') return
+  for (const cid of n.childIds) {
+    const c = editor.graph.getNode(cid)
+    if (!c) continue
+    if (n.layoutMode !== 'NONE' && c.layoutPositioning !== 'ABSOLUTE') continue
+    const h = applyAxisConstraint(c.x, c.width, oldW, nextW, c.horizontalConstraint)
+    const v = applyAxisConstraint(c.y, c.height, oldH, nextH, c.verticalConstraint)
+    const patch: Partial<typeof c> = {}
+    if (h.pos !== c.x) patch.x = h.pos
+    if (h.size !== c.width) patch.width = h.size
+    if (v.pos !== c.y) patch.y = v.pos
+    if (v.size !== c.height) patch.height = v.size
+    if (Object.keys(patch).length > 0) {
+      editor.updateNodeWithUndo(c.id, patch, label)
+    }
+  }
+}
+
 function commitWidth(v: number) {
   const nextW = Math.max(0.01, v)
-  if (!aspectLocked.value) {
-    updateAllWithUndo({ width: nextW }, 'Change width')
-    return
-  }
-  editor.undo.runBatch('Change width (aspect locked)', () => {
+  editor.undo.runBatch('Change width', () => {
     for (const n of nodes.value) {
-      const ratio = n.width > 0 ? n.height / n.width : 1
-      editor.updateNodeWithUndo(n.id, { width: nextW, height: Math.max(0.01, Math.round(nextW * ratio * 100) / 100) }, 'Change width')
+      const nextH = aspectLocked.value
+        ? Math.max(0.01, Math.round(nextW * (n.width > 0 ? n.height / n.width : 1) * 100) / 100)
+        : n.height
+      resizeNodeWithConstraints(n, nextW, nextH, 'Change width')
     }
   })
 }
 function commitHeight(v: number) {
   const nextH = Math.max(0.01, v)
-  if (!aspectLocked.value) {
-    updateAllWithUndo({ height: nextH }, 'Change height')
-    return
-  }
-  editor.undo.runBatch('Change height (aspect locked)', () => {
+  editor.undo.runBatch('Change height', () => {
     for (const n of nodes.value) {
-      const ratio = n.height > 0 ? n.width / n.height : 1
-      editor.updateNodeWithUndo(n.id, { height: nextH, width: Math.max(0.01, Math.round(nextH * ratio * 100) / 100) }, 'Change height')
+      const nextW = aspectLocked.value
+        ? Math.max(0.01, Math.round(nextH * (n.height > 0 ? n.width / n.height : 1) * 100) / 100)
+        : n.width
+      resizeNodeWithConstraints(n, nextW, nextH, 'Change height')
     }
   })
 }

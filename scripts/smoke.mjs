@@ -903,6 +903,40 @@ try {
       JSON.stringify(spec24Res))
   }
 
+  // Follow-up: Panel W/H edits trigger child constraints + single-step Undo
+  {
+    const { frameId, childId } = await page.evaluate(() => {
+      const ed = window.smokeEditor
+      const f = ed.graph.createNode('FRAME', ed.state.currentPageId, {
+        name: 'WHConstraintFrame', x: 50, y: 50, width: 200, height: 150,
+      })
+      const c = ed.graph.createNode('RECTANGLE', f.id, {
+        name: 'WHConstraintChild', x: 20, y: 20, width: 100, height: 40,
+        horizontalConstraint: 'STRETCH', verticalConstraint: 'MAX',
+      })
+      ed.select([f.id])
+      return { frameId: f.id, childId: c.id }
+    })
+    await page.waitForTimeout(100)
+    const wInput = page.locator('label.op-field', { hasText: 'W' }).locator('input').first()
+    await wInput.fill('300')
+    await wInput.press('Enter')
+    await page.waitForTimeout(100)
+    const afterResize = await page.evaluate((cid) => {
+      const c = window.smokeEditor.graph.getNode(cid)
+      return { fw: window.smokeEditor.getSelectedNode()?.width, cw: c?.width }
+    }, childId)
+    await page.evaluate(() => window.smokeEditor.undo.undo())
+    await page.waitForTimeout(100)
+    const afterUndo = await page.evaluate((cid) => {
+      const c = window.smokeEditor.graph.getNode(cid)
+      return { fw: window.smokeEditor.getSelectedNode()?.width, cw: c?.width }
+    }, childId)
+    check('Panel W edit stretches constrained child and single Undo reverts both',
+      afterResize.fw === 300 && afterResize.cw === 200 && afterUndo.fw === 200 && afterUndo.cw === 100,
+      JSON.stringify({ afterResize, afterUndo }))
+  }
+
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
   check('.pen opens and the canvas starts', pen.ok, pen.error)
   check('.pen has layers', pen.nodes > 1, `${pen.nodes} nodes, pages: ${pen.pages?.join(', ')}`)
