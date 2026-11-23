@@ -4,6 +4,7 @@
 // controls, so they are undoable and follow multi-selection ("Mixed") like the app's panel.
 import { computed, inject, ref, watch } from 'vue'
 import type { Fill, Stroke } from '@open-pencil/scene-graph'
+import { clearNodeFillOkHCL, clearNodeStrokeOkHCL, getFillOkHCL, getStrokeOkHCL } from '@open-pencil/scene-graph/color'
 import type { Color } from '@open-pencil/scene-graph/primitives'
 import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
 import { setPageBackgrounds } from '@open-pencil/core/figma-api'
@@ -169,6 +170,20 @@ function strokeOkHCL(i: number): OkHCLControls | null {
     clipped: info.clipped,
     setFieldFormat: (fmt) => okhcl.setStrokeFieldFormat(n, i, fmt),
     updateOkHCL: (patch) => okhcl.updateStrokeOkHCL(n, i, patch),
+  }
+}
+function setFillColor(i: number, c: Color) {
+  fills.actions.patch(i, { color: c })
+  const n = node.value
+  if (n && !isMulti.value && getFillOkHCL(n, i)) {
+    editor.updateNodeWithUndo(n.id, clearNodeFillOkHCL(n, i), 'Change fill')
+  }
+}
+function setStrokeColor(i: number, c: Color) {
+  strokes.actions.patch(i, { color: c })
+  const n = node.value
+  if (n && !isMulti.value && getStrokeOkHCL(n, i)) {
+    editor.updateNodeWithUndo(n.id, clearNodeStrokeOkHCL(n, i), 'Change stroke')
   }
 }
 function fillLabel(f: Fill) {
@@ -358,7 +373,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
             :color="fill.color"
             :opacity="fill.opacity"
             :okhcl="fillOkHCL(i)"
-            @color="(c: Color) => fills.actions.patch(i, { color: c })"
+            @color="(c: Color) => setFillColor(i, c)"
             @opacity="(o: number) => fills.actions.patch(i, { opacity: o })"
           />
           <span v-else class="op-paint-label">{{ fillLabel(fill) }}</span>
@@ -385,7 +400,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
               :color="stroke.color"
               :opacity="stroke.opacity"
               :okhcl="strokeOkHCL(i)"
-              @color="(c: Color) => strokes.actions.patch(i, { color: c })"
+              @color="(c: Color) => setStrokeColor(i, c)"
               @opacity="(o: number) => strokes.actions.patch(i, { opacity: o })"
             />
             <button class="op-icon-btn" :title="stroke.visible ? 'Hide stroke' : 'Show stroke'" @click="strokes.actions.toggleVisibility(i)">

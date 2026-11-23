@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { Color } from '@open-pencil/scene-graph/primitives'
 import {
   ColorAreaArea,
@@ -8,6 +8,7 @@ import {
   ColorSliderRoot,
   ColorSliderThumb,
   ColorSliderTrack,
+  parseColor,
 } from 'reka-ui'
 import { useEditor } from '@open-pencil/vue'
 import {
@@ -82,31 +83,47 @@ const formatOptions = computed(() => {
 })
 
 function onRekaUpdate(next: string | Parameters<typeof model.updateFromReka>[0]) {
-  if (typeof next !== 'string') model.updateFromReka(next)
+  model.updateFromReka(typeof next === 'string' ? parseColor(next) : next)
 }
 
 function keepOpen(event: PointerEvent): boolean {
   return pressAnswersEyedropper(editor, event)
 }
 
-function onOpenChange(open: boolean) {
-  if (!open && picking.value) {
+function onEyedropperEsc(e: KeyboardEvent) {
+  if (e.key !== 'Escape' || !picking.value) return
+  e.preventDefault()
+  e.stopPropagation()
+  cancelEyedropperSample(editor)
+  picking.value = false
+}
+
+function stopEyedropper() {
+  window.removeEventListener('keydown', onEyedropperEsc, true)
+  if (picking.value) {
     cancelEyedropperSample(editor)
     picking.value = false
   }
 }
 
+onBeforeUnmount(stopEyedropper)
+
+function onOpenChange(open: boolean) {
+  if (!open) stopEyedropper()
+}
+
 async function toggleEyedropper() {
   if (picking.value) {
-    cancelEyedropperSample(editor)
-    picking.value = false
+    stopEyedropper()
     return
   }
   picking.value = true
+  window.addEventListener('keydown', onEyedropperEsc, true)
   try {
     const sampled = await requestEyedropperSample(editor)
     if (sampled) emitCombined({ ...sampled, a: props.opacity })
   } finally {
+    window.removeEventListener('keydown', onEyedropperEsc, true)
     picking.value = false
   }
 }
@@ -134,6 +151,17 @@ function commitHex() {
 
 const okhclHueGradient =
   'linear-gradient(to right, oklch(0.7 0.2 0), oklch(0.7 0.2 60), oklch(0.7 0.2 120), oklch(0.7 0.2 180), oklch(0.7 0.2 240), oklch(0.7 0.2 300), oklch(0.7 0.2 360))'
+const hueGradient =
+  'linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)'
+const svAreaBackground = computed(
+  () => `linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${Math.round(model.hsb.value.h)}, 100%, 50%))`,
+)
+const alphaGradient = computed(() => {
+  const r = Math.round(props.color.r * 255)
+  const g = Math.round(props.color.g * 255)
+  const b = Math.round(props.color.b * 255)
+  return `linear-gradient(to right, transparent, rgb(${r}, ${g}, ${b}))`
+})
 const gamutLabel = computed(() => (props.okhcl?.previewColorSpace === 'display-p3' ? 'P3' : 'sRGB'))
 </script>
 
@@ -159,14 +187,14 @@ const gamutLabel = computed(() => (props.okhcl?.previewColorSpace === 'display-p
       <div class="op-cp" @keydown.stop>
         <template v-if="model.format.value !== 'okhcl'">
           <ColorAreaRoot
-            :model-value="model.rekaColor.value"
+            :model-value="model.hsb.value"
             color-space="hsb"
             x-channel="saturation"
             y-channel="brightness"
             class="op-cp-area"
             @update:model-value="onRekaUpdate"
           >
-            <ColorAreaArea class="op-cp-area-bg">
+            <ColorAreaArea class="op-cp-area-bg" :style="{ background: svAreaBackground }">
               <ColorAreaThumb class="op-cp-thumb" />
             </ColorAreaArea>
           </ColorAreaRoot>
@@ -187,24 +215,24 @@ const gamutLabel = computed(() => (props.okhcl?.previewColorSpace === 'display-p
             </button>
             <div class="op-cp-sliders">
               <ColorSliderRoot
-                :model-value="model.rekaColor.value"
+                :model-value="model.hsb.value"
                 color-space="hsb"
                 channel="hue"
                 class="op-cp-slider"
                 @update:model-value="onRekaUpdate"
               >
-                <ColorSliderTrack class="op-cp-track">
+                <ColorSliderTrack class="op-cp-track" :style="{ background: hueGradient }">
                   <ColorSliderThumb class="op-cp-thumb" />
                 </ColorSliderTrack>
               </ColorSliderRoot>
               <ColorSliderRoot
-                :model-value="model.rekaColor.value"
+                :model-value="model.hsb.value"
                 color-space="hsb"
                 channel="alpha"
                 class="op-cp-slider op-cp-alpha"
                 @update:model-value="onRekaUpdate"
               >
-                <ColorSliderTrack class="op-cp-track">
+                <ColorSliderTrack class="op-cp-track" :style="{ background: alphaGradient }">
                   <ColorSliderThumb class="op-cp-thumb" />
                 </ColorSliderTrack>
               </ColorSliderRoot>
@@ -272,13 +300,13 @@ const gamutLabel = computed(() => (props.okhcl?.previewColorSpace === 'display-p
               </button>
               <div class="op-cp-sliders">
                 <ColorSliderRoot
-                  :model-value="model.rekaColor.value"
+                  :model-value="model.hsb.value"
                   color-space="hsb"
                   channel="alpha"
                   class="op-cp-slider op-cp-alpha"
                   @update:model-value="onRekaUpdate"
                 >
-                  <ColorSliderTrack class="op-cp-track">
+                  <ColorSliderTrack class="op-cp-track" :style="{ background: alphaGradient }">
                     <ColorSliderThumb class="op-cp-thumb" />
                   </ColorSliderTrack>
                 </ColorSliderRoot>
