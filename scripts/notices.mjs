@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 
 const sources = [
   ['OpenPencil (@open-pencil/core and related packages)', 'node_modules/@open-pencil/core/LICENSE'],
+  ['@open-pencil/mcp', 'node_modules/@open-pencil/mcp/LICENSE'],
   ['@open-pencil/vue', 'node_modules/@open-pencil/vue/LICENSE'],
   ['CanvasKit / Skia (canvaskit.wasm)', 'node_modules/@open-pencil/canvaskit/dist/THIRD-PARTY-NOTICES.md'],
   ['Taffy (taffy.wasm)', 'node_modules/@open-pencil/taffy/dist/THIRD-PARTY-NOTICES.md'],
