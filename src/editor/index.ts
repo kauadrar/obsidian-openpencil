@@ -23,7 +23,10 @@ import {
 export type { ContextMenuEntry, Notify, PickImage, ResolveDropFiles, ShowContextMenu, WriteExport }
 import { createDefaultEditorState, createDocumentGraph, createEditor, type Editor, type Tool } from '@open-pencil/core'
 import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
-import { setPageBackgrounds } from '@open-pencil/core/figma-api'
+import { setPageBackgrounds, FigmaAPI } from '@open-pencil/core/figma-api'
+import { ALL_TOOLS, CODEGEN_PROMPT, type ToolDef } from '@open-pencil/core/tools'
+import type { McpServer } from '@modelcontextprotocol/server'
+import { registerTools, type RPCSender } from '@open-pencil/mcp'
 import { exportFigFile, parseFigFile, setFigCanvasCompressor } from '@open-pencil/core/io/formats/fig'
 import { buildFigKiwi, loadFigDataCompressor } from '@open-pencil/kiwi/fig/container'
 import { penFormat } from '@open-pencil/core/io'
@@ -274,4 +277,78 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
 /** An empty one-page .fig document, for "New OpenPencil design". */
 export async function createBlankFig(documentName: string): Promise<Uint8Array> {
   return exportFigFile(createDocumentGraph('design', obsidianTheme()), { documentName })
+}
+
+export async function createEmptyDesignBytes(extension: DesignExtension, documentName = 'design'): Promise<Uint8Array> {
+  if (extension === 'fig') {
+    return await createBlankFig(documentName)
+  }
+  const graph = createDocumentGraph('design', obsidianTheme())
+  if (!penFormat.writeDocument) {
+    throw new Error('OpenPencil cannot write .pen files.')
+  }
+  const result = await penFormat.writeDocument(graph, { documentName })
+  return typeof result.data === 'string' ? new TextEncoder().encode(result.data) : new Uint8Array(result.data)
+}
+
+const CORE_TOOLS_BY_NAME = new Map<string, ToolDef>(ALL_TOOLS.map((tool) => [tool.name, tool]))
+
+export function getCodegenPrompt(): string {
+  return CODEGEN_PROMPT
+}
+
+export function registerMcpTools(mcpServer: McpServer, sendRPC: RPCSender): void {
+  registerTools(mcpServer, {
+    policy: {
+      disabledTools: [],
+      allowEval: false,
+      scope: 'document',
+    },
+    sendRPC,
+  })
+}
+
+export async function executeEditorTool(
+  editor: Editor,
+  command: string,
+  args: Record<string, unknown>,
+): Promise<{ output: unknown; mutates: boolean }> {
+  const tool = CORE_TOOLS_BY_NAME.get(command)
+  if (!tool) throw new Error(`Unknown MCP tool: ${command}`)
+  const figma = new FigmaAPI(editor.graph)
+  await tool.loadFonts(figma, args)
+  return { output: await tool.execute(figma, args), mutates: tool.mutates }
+}
+
+export async function executeHeadlessTool(
+  data: Uint8Array,
+  extension: DesignExtension,
+  command: string,
+  args: Record<string, unknown>,
+): Promise<{ output: unknown; updatedBytes?: Uint8Array }> {
+  const tool = CORE_TOOLS_BY_NAME.get(command)
+  if (!tool) throw new Error(`Unknown MCP tool: ${command}`)
+  let graph
+  if (extension === 'fig') {
+    graph = await parseFigFile(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer)
+  } else {
+    if (!penFormat.readDocument) throw new Error('OpenPencil cannot read .pen files.')
+    graph = (await penFormat.readDocument({ data })).graph
+  }
+  const figma = new FigmaAPI(graph)
+  await tool.loadFonts(figma, args)
+  const output = await tool.execute(figma, args)
+  if (!tool.mutates) {
+    return { output }
+  }
+  if (extension === 'fig') {
+    return { output, updatedBytes: await exportFigFile(graph, { documentName: 'design' }) }
+  }
+  if (!penFormat.writeDocument) {
+    throw new Error('OpenPencil cannot write .pen files.')
+  }
+  const written = await penFormat.writeDocument(graph, { documentName: 'design' })
+  const updatedBytes =
+    typeof written.data === 'string' ? new TextEncoder().encode(written.data) : new Uint8Array(written.data)
+  return { output, updatedBytes }
 }
