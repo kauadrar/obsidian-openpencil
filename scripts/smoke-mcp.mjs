@@ -64,6 +64,7 @@ for (const req of [
 }
 console.log(`PASS tools/list (${names.size} tools)`)
 
+let failures = 0
 for (const [name, args] of [
   ['list_documents', {}],
   ['list_recent_documents', {}],
@@ -81,7 +82,22 @@ for (const [name, args] of [
   ['open_document', { path: '__smoke_mcp__.fig' }],
   ['close_document', { document_id: '__smoke_mcp__.fig' }],
 ]) {
-  const res = await rpc('tools/call', { name, arguments: args })
-  assert.ok(!res.result?.isError, `${name} returned isError: ${JSON.stringify(res.result)}`)
-  console.log(`PASS ${name}`)
+  try {
+    const res = await rpc('tools/call', { name, arguments: args })
+    if (res.result?.isError) {
+      failures++
+      console.error(`FAIL ${name}: ${JSON.stringify(res.result)}`)
+    } else {
+      console.log(`PASS ${name}`)
+    }
+  } catch (err) {
+    failures++
+    console.error(`FAIL ${name}: ${err instanceof Error ? err.message : String(err)}`)
+  }
 }
+
+if (failures > 0) {
+  console.error(`\n${failures} step(s) failed`)
+  process.exit(1)
+}
+console.log('\nAll MCP smoke steps passed')
