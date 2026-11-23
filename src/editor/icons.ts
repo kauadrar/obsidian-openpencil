@@ -21,6 +21,9 @@ export const TOOL_ICONS: Partial<Record<Tool, string>> = {
   CONNECTOR: '<path d="M3 13c5 0 3-10 10-10M10.5 3H13v2.5"/>',
 }
 
+export const MASK_ICON =
+  '<circle cx="8" cy="8" r="5.5" /><path d="M8 2.5a5.5 5.5 0 0 1 0 11z" fill="currentColor" />'
+
 export const LAYER_ICONS: Record<string, string> = {
   FRAME: TOOL_ICONS.FRAME!,
   SECTION: TOOL_ICONS.SECTION!,

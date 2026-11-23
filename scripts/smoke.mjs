@@ -877,6 +877,32 @@ try {
       JSON.stringify({ hiddenOnTop, shownOnChild, ...spec23Res }))
   }
 
+  // Spec 24: Panel header & mask
+  {
+    const rectId = await page.evaluate(() => {
+      const ed = window.smokeEditor
+      const r = ed.graph.createNode('RECTANGLE', ed.state.currentPageId, {
+        name: 'Spec24Rect', x: 50, y: 50, width: 100, height: 100,
+      })
+      ed.select([r.id])
+      return r.id
+    })
+    await page.waitForTimeout(100)
+    await page.locator('.op-title-name').fill('RenamedRect')
+    await page.locator('.op-title-name').press('Enter')
+    await page.locator('button[title="Use as mask"]').click()
+    await page.waitForTimeout(100)
+    await page.locator('select[aria-label="Mask type"]').selectOption('LUMINANCE')
+    await page.waitForTimeout(100)
+    const spec24Res = await page.evaluate(() => {
+      const n = window.smokeEditor.getSelectedNode()
+      return { name: n?.name, isMask: n?.isMask, maskType: n?.maskType }
+    })
+    check('Header rename, Use as mask toggle, and Mask type select work',
+      spec24Res.name === 'RenamedRect' && spec24Res.isMask === true && spec24Res.maskType === 'LUMINANCE',
+      JSON.stringify(spec24Res))
+  }
+
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
   check('.pen opens and the canvas starts', pen.ok, pen.error)
   check('.pen has layers', pen.nodes > 1, `${pen.nodes} nodes, pages: ${pen.pages?.join(', ')}`)

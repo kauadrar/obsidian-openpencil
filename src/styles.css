@@ -1392,3 +1392,25 @@
   flex-direction: column;
   gap: 6px;
 }
+.op-title-name {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+.op-title-name:focus {
+  outline: none;
+  border-color: var(--interactive-accent, #4c8bf5);
+  background: var(--background-secondary, #252525);
+}
+.op-title-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}

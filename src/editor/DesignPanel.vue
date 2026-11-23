@@ -3,7 +3,7 @@
 // appearance, typography, fill and stroke for a selection. Edits go through @open-pencil/vue's
 // controls, so they are undoable and follow multi-selection ("Mixed") like the app's panel.
 import { computed, inject, ref, watch } from 'vue'
-import type { BlendMode, Fill, Stroke } from '@open-pencil/scene-graph'
+import type { BlendMode, Fill, MaskType, Stroke } from '@open-pencil/scene-graph'
 import { clearNodeFillOkHCL, clearNodeStrokeOkHCL, getFillOkHCL, getStrokeOkHCL } from '@open-pencil/scene-graph/color'
 import type { Color } from '@open-pencil/scene-graph/primitives'
 import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
@@ -30,7 +30,9 @@ import AutoLayoutSection from './AutoLayoutSection.vue'
 import EffectsSection from './EffectsSection.vue'
 import ExportSection from './ExportSection.vue'
 import { SHOW_CONTEXT_MENU, toContextEntries } from './context'
-import { EYE_ICON, EYE_OFF_ICON, LAYER_ICONS } from './icons'
+import { useMask } from '@open-pencil/vue/controls/mask'
+import { useSelectionCapabilities } from '@open-pencil/vue/editor/selection-capabilities'
+import { EYE_ICON, EYE_OFF_ICON, LAYER_ICONS, MASK_ICON } from './icons'
 
 const editor = useEditor()
 const { node, nodes, isMulti, merged, updateAllWithUndo } = useNodeProps()
@@ -92,7 +94,61 @@ const heading = computed(() => {
   const n = node.value
   return n ? (TYPE_NAMES[n.type] ?? n.type) : ''
 })
-const headingIcon = computed(() => (node.value && !isMulti.value ? LAYER_ICONS[node.value.type] : undefined))
+const headingIcon = computed(() => {
+  if (!node.value || isMulti.value) return undefined
+  if (node.value.isMask) return MASK_ICON
+  return LAYER_ICONS[node.value.type]
+})
+
+const mask = useMask()
+const caps = useSelectionCapabilities()
+const layerName = ref('')
+watch(
+  () => node.value?.name ?? '',
+  (v) => (layerName.value = v),
+  { immediate: true },
+)
+function commitLayerName() {
+  const n = node.value
+  const trimmed = layerName.value.trim()
+  if (!n || !trimmed || trimmed === n.name) {
+    layerName.value = n?.name ?? ''
+    return
+  }
+  editor.updateNodeWithUndo(n.id, { name: trimmed }, 'Rename layer')
+}
+
+function openLayerTypeMenu(event: MouseEvent) {
+  const n = node.value
+  if (!n) return
+  const isTopLevel = n.parentId === editor.state.currentPageId
+  const canGroup = n.type !== 'SECTION' && n.childIds.length > 0
+  openMenuAtButton(
+    [
+      {
+        label: n.type === 'SECTION' ? '✓ Section' : 'Section',
+        disabled: !isTopLevel,
+        action: () => {
+          if (n.type !== 'SECTION') editor.wrapInSection([n])
+        },
+      },
+      {
+        label: n.type === 'FRAME' ? '✓ Frame' : 'Frame',
+        action: () => {
+          if (n.type !== 'FRAME') editor.frameSelection()
+        },
+      },
+      {
+        label: n.type === 'GROUP' ? '✓ Group' : 'Group',
+        disabled: !canGroup,
+        action: () => {
+          if (n.type !== 'GROUP') editor.groupSelected()
+        },
+      },
+    ],
+    event,
+  )
+}
 
 function openMenuAtButton(entries: MenuEntry[], event: MouseEvent) {
   if (!showContextMenu) return
@@ -364,13 +420,68 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
     <!-- A selection -->
     <template v-else>
       <section class="op-prop op-prop-title">
-        <svg v-if="headingIcon" class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" v-html="headingIcon" />
-        <span>{{ heading }}</span>
-        <button class="op-icon-btn op-title-action" title="Boolean operations" @click="openBooleanMenu">
-          <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25">
-            <rect x="2.5" y="2.5" width="7" height="7" rx="1" /><rect x="6.5" y="6.5" width="7" height="7" rx="1" />
-          </svg>
-        </button>
+        <template v-if="!isMulti && node">
+          <button
+            v-if="node.type === 'FRAME' || node.type === 'GROUP' || node.type === 'SECTION'"
+            type="button"
+            class="op-icon-btn op-layer-type-btn"
+            title="Layer type"
+            @click="openLayerTypeMenu"
+          >
+            <svg v-if="headingIcon" class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" v-html="headingIcon" />
+          </button>
+          <svg v-else-if="headingIcon" class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" v-html="headingIcon" />
+          <input
+            v-model="layerName"
+            class="op-title-name"
+            aria-label="Layer name"
+            spellcheck="false"
+            @keydown.stop="(e: KeyboardEvent) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()"
+            @change="commitLayerName"
+          />
+          <div class="op-title-actions">
+            <button v-if="caps.canCreateComponent.value" type="button" class="op-icon-btn" title="Create component" @click="editor.createComponentFromSelection()">◆</button>
+            <button v-if="caps.canGoToMainComponent.value" type="button" class="op-icon-btn" title="Go to main component" @click="editor.goToMainComponent()">↗</button>
+            <button v-if="caps.canDetachInstance.value" type="button" class="op-icon-btn" title="Detach instance" @click="editor.detachInstance()">⛓‍💥</button>
+            <button
+              v-if="caps.canToggleMask.value"
+              type="button"
+              class="op-icon-btn"
+              :class="{ 'is-active': node.isMask }"
+              title="Use as mask"
+              @click="editor.updateNodeWithUndo(node.id, { isMask: !node.isMask }, 'Toggle mask')"
+            >
+              <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" v-html="MASK_ICON" />
+            </button>
+          </div>
+        </template>
+        <template v-else>
+          <span>{{ heading }}</span>
+          <div class="op-title-actions">
+            <button v-if="caps.canCreateComponent.value" type="button" class="op-icon-btn" title="Create component" @click="editor.createComponentFromSelection()">◆</button>
+            <button v-if="caps.canBooleanOperation.value" type="button" class="op-icon-btn op-title-action" title="Boolean operations" @click="openBooleanMenu">
+              <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25">
+                <rect x="2.5" y="2.5" width="7" height="7" rx="1" /><rect x="6.5" y="6.5" width="7" height="7" rx="1" />
+              </svg>
+            </button>
+          </div>
+        </template>
+      </section>
+
+      <section v-if="mask.active.value" class="op-prop op-mask-section">
+        <div class="op-prop-head">Mask</div>
+        <label class="op-field op-field-wide">
+          <span>Mask type</span>
+          <select
+            aria-label="Mask type"
+            :value="mask.maskType.value"
+            @change="(e: Event) => mask.setMaskType((e.target as HTMLSelectElement).value as MaskType)"
+          >
+            <option value="ALPHA">Alpha</option>
+            <option value="VECTOR">Vector</option>
+            <option value="LUMINANCE">Luminance</option>
+          </select>
+        </label>
       </section>
 
       <PositionControlsRoot v-slot="pos">

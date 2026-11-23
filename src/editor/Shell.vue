@@ -28,6 +28,7 @@ import {
   EYE_ICON,
   EYE_OFF_ICON,
   LAYER_ICONS,
+  MASK_ICON,
   LOCK_ICON,
   PAGE_ICON,
   TOOL_ICONS,
@@ -469,7 +470,7 @@ defineExpose({ canRunCommand, runCommand, placeFiles })
                 >
                   <Icon :svg="CHEVRON_ICON" :size="12" />
                 </button>
-                <Icon class="op-layer-icon" :svg="LAYER_ICONS[node.type] ?? LAYER_ICONS.RECTANGLE" :size="14" />
+                <Icon class="op-layer-icon" :svg="node.mask ? MASK_ICON : (LAYER_ICONS[node.type] ?? LAYER_ICONS.RECTANGLE)" :size="14" />
                 <input
                   v-if="layerRename.editingId.value === node.id"
                   :ref="(el) => el && layerRename.focusInput(el as HTMLInputElement)"
