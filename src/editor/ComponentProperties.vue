@@ -3,18 +3,42 @@
 // swap properties, edit each one's name and default, and remove it. Instances pick these up through
 // their overrides.
 import { computed, ref } from 'vue'
+import { useEditor } from '@open-pencil/vue'
 import { useComponentPropertyAuthoring } from '@open-pencil/vue/controls/component-props'
-import { ADDABLE_PROPERTIES, booleanToValue, propertyRowsOnly, valueToBoolean, type PropertyKind } from './component-props'
+import {
+  ADDABLE_PROPERTIES,
+  booleanToValue,
+  propertyRowsOnly,
+  subtreeIds,
+  swapDefaultFor,
+  valueToBoolean,
+  type PropertyKind,
+} from './component-props'
 
 const auth = useComponentPropertyAuthoring()
+const editor = useEditor()
 const menuOpen = ref(false)
 
 const owner = computed(() => auth.context.value?.owner.id ?? null)
 const rows = computed(() => propertyRowsOnly(auth.rows.value))
 
-function add(type: PropertyKind, name: string, defaultValue: string) {
+// Core only accepts an Instance swap property whose default is an existing component, so new ones start
+// on another component in the file. Null (item disabled) when the file has no other component.
+const swapDefault = computed<string | null>(() => {
+  void editor.state.sceneVersion
   const ownerId = owner.value
-  if (!ownerId) return
+  if (!ownerId) return null
+  const inside = subtreeIds(ownerId, (id) => editor.graph.getNode(id))
+  return swapDefaultFor([...editor.graph.getAllNodes()], inside)
+})
+
+function defaultFor(item: { type: PropertyKind; defaultValue: string }): string | null {
+  return item.type === 'INSTANCE_SWAP' ? swapDefault.value : item.defaultValue
+}
+
+function add(type: PropertyKind, name: string, defaultValue: string | null) {
+  const ownerId = owner.value
+  if (!ownerId || defaultValue === null) return
   auth.create(ownerId, name, type, defaultValue)
   menuOpen.value = false
 }
@@ -43,7 +67,14 @@ function commitName(propertyId: string, ownerId: string, event: Event) {
         >+</button>
         <ul v-if="menuOpen" class="op-add-menu" role="menu">
           <li v-for="item in ADDABLE_PROPERTIES" :key="item.type">
-            <button type="button" role="menuitem" class="op-add-item" @click="add(item.type, item.name, item.defaultValue)">
+            <button
+              type="button"
+              role="menuitem"
+              class="op-add-item"
+              :disabled="defaultFor(item) === null"
+              :title="defaultFor(item) === null ? 'Needs another component in this file' : undefined"
+              @click="add(item.type, item.name, defaultFor(item))"
+            >
               {{ item.label }}
             </button>
           </li>
