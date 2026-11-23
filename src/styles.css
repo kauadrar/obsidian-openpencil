@@ -235,6 +235,11 @@
 .op-shell .op-layer-tools:has(.is-on) {
   display: flex;
 }
+@media (hover: none) {
+  .op-shell .op-layer .op-layer-tools {
+    display: flex;
+  }
+}
 .op-shell .op-layer-tools .op-icon-btn {
   width: 20px;
   height: 20px;

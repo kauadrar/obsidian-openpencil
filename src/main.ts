@@ -128,7 +128,12 @@ export default class OpenPencilPlugin extends Plugin {
         const url = adapter.getResourcePath(normalizePath(`${editorDir}/editor.js`))
         return import(/* @vite-ignore */ url) as Promise<typeof EditorModule>
       })
-      this.editorModule.catch(() => (this.editorModule = null))
+      this.editorModule.catch((err) => {
+        this.editorModule = null
+        if (Platform.isMobile) {
+          new Notice(`OpenPencil v${this.manifest.version}: failed to load editor assets — ${message(err)}`, 10000)
+        }
+      })
     }
     return this.editorModule
   }
@@ -544,7 +549,11 @@ class DesignView extends FileView {
       this.mounted.setActive(this.app.workspace.getActiveViewOfType(DesignView) === this)
     } catch (e) {
       loading.setText('')
-      host.createDiv({ cls: 'openpencil-error', text: `OpenPencil could not open ${file.name}: ${message(e)}` })
+      const msg = message(e)
+      host.createDiv({ cls: 'openpencil-error', text: `OpenPencil could not open ${file.name}: ${msg}` })
+      if (Platform.isMobile) {
+        new Notice(`OpenPencil v${this.plugin.manifest.version}: ${msg}`, 10000)
+      }
       console.error('[openpencil]', e)
     }
   }
