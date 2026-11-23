@@ -2020,3 +2020,11 @@
   font-size: 11px;
   color: var(--op-text-muted);
 }
+
+/* Flyout: ✓ marks the current tool */
+.op-shell .op-flyout-item .op-flyout-check {
+  flex: none;
+  width: 10px;
+  font-size: 11px;
+  text-align: center;
+}

@@ -268,6 +268,11 @@ const TOOL_NAMES: Partial<Record<Tool, [string, string]>> = {
 }
 const toolName = (t: Tool) => TOOL_NAMES[t]?.[0] ?? t
 const toolKey = (t: Tool) => TOOL_NAMES[t]?.[1] ?? ''
+// A tool button's tooltip: its name and shortcut. A flyout button names the tool it last picked.
+const toolTitle = (tool: { label: string; shortcut?: string; flyout?: readonly Tool[] }, current: Tool) => {
+  if (tool.flyout) return `${toolName(current)}${toolKey(current) ? ` (${toolKey(current)})` : ''}`
+  return `${tool.label}${tool.shortcut ? ` (${tool.shortcut})` : ''}`
+}
 
 const sidebarOpen = ref(true)
 const leftTab = ref<'layers' | 'assets'>('layers')
@@ -676,7 +681,7 @@ defineExpose({ canRunCommand, runCommand, placeFiles })
             <button
               class="op-tool"
               :class="{ 'is-active': activeTool === tool.key || tool.flyout?.includes(activeTool) }"
-              :title="tool.flyout ? toolName(flyoutSelections.get(tool.key) ?? tool.key) : `${tool.label}${tool.shortcut ? ` (${tool.shortcut})` : ''}`"
+              :title="toolTitle(tool, flyoutSelections.get(tool.key) ?? tool.key)"
               @click="actions.setTool(flyoutSelections.get(tool.key) ?? tool.key)"
             >
               <Icon :svg="TOOL_ICONS[flyoutSelections.get(tool.key) ?? tool.key] ?? TOOL_ICONS.SELECT!" :size="18" />
@@ -698,6 +703,7 @@ defineExpose({ canRunCommand, runCommand, placeFiles })
                 role="menuitem"
                 @click="actions.setTool(sub)"
               >
+                <span class="op-flyout-check" aria-hidden="true">{{ activeTool === sub ? '✓' : '' }}</span>
                 <Icon :svg="TOOL_ICONS[sub] ?? TOOL_ICONS.SELECT!" :size="14" />
                 <span>{{ toolName(sub) }}</span>
                 <kbd>{{ toolKey(sub) }}</kbd>
