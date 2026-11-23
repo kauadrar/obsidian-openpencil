@@ -6,7 +6,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import type { Editor } from '@open-pencil/core'
 import { useIconSearch } from '@open-pencil/vue/controls/icon'
-import { MATERIAL_SYMBOLS_PREFIXES } from '@open-pencil/core/icons'
+import { iconify } from '@open-pencil/core/icons'
 
 const props = defineProps<{ editor: Editor }>()
 
@@ -20,20 +20,26 @@ const previewUrl = (name: string): string | null => {
   return svg ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}` : null
 }
 
-// Iconify is unreachable when the browser is offline, when the search fails, or when the set list has
-// loaded with only the Material Symbols sets, which the editor draws itself. Then no results are shown.
-const materialPrefixes: readonly string[] = MATERIAL_SYMBOLS_PREFIXES
-const iconifySets = computed(() => search.sets.value.filter((s) => !materialPrefixes.includes(s.prefix)))
-const iconifyUnreachable = computed(
-  () =>
-    search.failed.value ||
-    (!search.setsLoading.value && search.sets.value.length > 0 && iconifySets.value.length === 0),
-)
-const showResults = computed(() => online.value && !iconifyUnreachable.value)
-// Iconify's sets are fetched over the network; the Material Symbols results can still show offline, so the
-// note says what is missing rather than leaving the search looking complete.
+// Whether Iconify answers is probed directly with its own search, which the editor's combined search
+// hides: when Iconify fails, the Material Symbols results still come back, so a search that returns
+// something proves nothing. The probe runs when the popover opens and when the browser comes back online.
+// Iconify's sets are fetched over the network too; the Material Symbols results can still show offline,
+// so the popover hides results and says why instead of looking complete.
+const reachable = ref<boolean | null>(null)
+const probe = async () => {
+  reachable.value = null
+  try {
+    await iconify.search('a', { limit: 1 })
+    reachable.value = true
+  } catch {
+    reachable.value = false
+  }
+}
 const online = ref(typeof navigator === 'undefined' ? true : navigator.onLine)
-const setOnline = () => (online.value = navigator.onLine)
+const setOnline = () => {
+  online.value = navigator.onLine
+  if (online.value && open.value) void probe()
+}
 onMounted(() => {
   window.addEventListener('online', setOnline)
   window.addEventListener('offline', setOnline)
@@ -42,12 +48,23 @@ onBeforeUnmount(() => {
   window.removeEventListener('online', setOnline)
   window.removeEventListener('offline', setOnline)
 })
+const iconifyUnreachable = computed(() => reachable.value === false)
+const showResults = computed(() => online.value && reachable.value === true)
+// The set filter lists the catalogue's sets. When the catalogue is unavailable, it falls back to the sets
+// the current results come from, so the filter still narrows results.
+const setChoices = computed<{ prefix: string; name: string }[]>(() => {
+  if (search.sets.value.length > 0) return search.sets.value.map((s) => ({ prefix: s.prefix, name: s.name }))
+  const prefixes = new Set(search.visible.value.map((n) => n.split(':')[0] ?? '').filter(Boolean))
+  return [...prefixes].map((prefix) => ({ prefix, name: prefix }))
+})
 const empty = computed(
   () => showResults.value && !search.loading.value && search.query.value.trim() !== '' && search.visible.value.length === 0,
 )
 
 watch(open, (isOpen) => {
-  if (isOpen) void search.loadSets().catch(() => {})
+  if (!isOpen) return
+  void probe()
+  void search.loadSets().catch(() => {})
 })
 watch(
   () => search.visible.value,
@@ -106,13 +123,15 @@ async function insert(name: string) {
             @change="(e) => (search.set.value = (e.target as HTMLSelectElement).value || null)"
           >
             <option value="">All sets</option>
-            <option v-for="s in search.sets.value" :key="s.prefix" :value="s.prefix">{{ s.name }}</option>
+            <option v-for="s in setChoices" :key="s.prefix" :value="s.prefix">{{ s.name }}</option>
           </select>
         </div>
 
         <div v-if="!online" class="op-icon-status">Offline: Iconify icons need an internet connection.</div>
         <div v-else-if="search.loading.value || search.setsLoading.value" class="op-icon-status">Searching…</div>
-        <div v-else-if="iconifyUnreachable" class="op-icon-status">Icons unavailable. Iconify needs an internet connection.</div>
+        <div v-else-if="iconifyUnreachable || search.failed.value" class="op-icon-status">Icons unavailable. Iconify needs an internet connection.</div>
+        <div v-else-if="reachable === null && open" class="op-icon-status">Searching…</div>
+        <div v-else-if="!search.setsLoading.value && search.sets.value.length === 0" class="op-icon-status">Set list unavailable; results still show.</div>
         <div v-else-if="empty" class="op-icon-status">No icons found</div>
 
         <div v-if="showResults" class="op-icon-grid" role="list">
