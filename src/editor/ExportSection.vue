@@ -25,6 +25,13 @@ const settings = computed(() => ex.activeSettings.value)
 const busy = ref(false)
 const status = ref('')
 
+/** A preset applies at once; the select goes back to its placeholder so the same preset can be picked again. */
+function pickPreset(index: number, select: HTMLSelectElement) {
+  const scale = Number(select.value)
+  if (Number.isFinite(scale) && scale > 0) ex.updateScale(index, scale)
+  select.value = ''
+}
+
 /** A typed scale is committed on Enter or when the field loses focus; text that is not a scale reverts. */
 function commitScale(index: number, field: HTMLInputElement, current: number) {
   const next = parseExportScale(field.value)
@@ -107,14 +114,10 @@ async function runExport() {
     </div>
     <div v-if="ex.mixed.value" class="op-prop-note">Click + to replace mixed export settings</div>
     <template v-else>
-      <datalist id="op-export-scale-presets">
-        <option v-for="p in EXPORT_SCALE_PRESETS" :key="p" :value="exportScaleLabel(p)" />
-      </datalist>
       <div v-for="(setting, i) in settings" :key="i" class="op-paint">
         <label class="op-field op-export-scale" :class="{ 'is-disabled': !ex.formatSupportsScale(setting.format) }">
           <input
             type="text"
-            list="op-export-scale-presets"
             spellcheck="false"
             :value="exportScaleLabel(setting.scale)"
             :disabled="!ex.formatSupportsScale(setting.format)"
@@ -124,6 +127,15 @@ async function runExport() {
             @blur="(e: FocusEvent) => commitScale(i, e.target as HTMLInputElement, setting.scale)"
           />
         </label>
+        <select
+          class="op-export-preset"
+          aria-label="Export scale presets"
+          :disabled="!ex.formatSupportsScale(setting.format)"
+          @change="(e: Event) => pickPreset(i, e.target as HTMLSelectElement)"
+        >
+          <option value="" disabled selected>Preset</option>
+          <option v-for="p in EXPORT_SCALE_PRESETS" :key="p" :value="p">{{ exportScaleLabel(p) }}</option>
+        </select>
         <label class="op-field op-export-format">
           <select :value="setting.format" @change="(e: Event) => ex.updateFormat(i, (e.target as HTMLSelectElement).value as ExportSetting['format'])">
             <option v-if="!(setting.format in ADAPTERS)" :value="setting.format" disabled>{{ setting.format.toUpperCase() }} (desktop app)</option>
