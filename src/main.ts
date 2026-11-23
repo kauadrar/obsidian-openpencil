@@ -2,6 +2,8 @@
 // (editor/editor.js) on first use, unpacking it from main.js into the plugin folder if needed.
 import {
   FileView,
+  Menu,
+  MenuItem,
   Notice,
   Plugin,
   TFile,
@@ -138,6 +140,7 @@ class DesignView extends FileView {
         onChange: () => this.markDirty(),
         onSaveRequest: () => void this.save(),
         writeExport: (name, bytes) => this.writeExport(file, name, bytes),
+        showContextMenu: (entries, pos) => this.showContextMenu(entries, pos),
       })
       this.mounted.setActive(this.app.workspace.getActiveViewOfType(DesignView) === this)
     } catch (e) {
@@ -236,6 +239,40 @@ class DesignView extends FileView {
     return new Uint8Array(await this.app.vault.readBinary(target))
   }
 
+  private showContextMenu(entries: EditorModule.ContextMenuEntry[], pos: { x: number; y: number }) {
+    const menu = new Menu()
+    menu.setNoIcon()
+    this.populateMenu(menu, entries, pos)
+    menu.showAtPosition(pos)
+  }
+
+  private populateMenu(menu: Menu, entries: EditorModule.ContextMenuEntry[], pos: { x: number; y: number }) {
+    for (const entry of entries) {
+      if (entry.separator) {
+        menu.addSeparator()
+        continue
+      }
+      const actionEntry = entry
+      menu.addItem((item) => {
+        item.setTitle(menuTitle(actionEntry.label, actionEntry.shortcut))
+        if (actionEntry.disabled) item.setDisabled(true)
+        if (actionEntry.checked) item.setChecked(true)
+        if (actionEntry.sub?.length) {
+          const setSubmenu = (item as MenuItem & { setSubmenu?: () => Menu }).setSubmenu
+          if (typeof setSubmenu === 'function') {
+            const subMenu = setSubmenu.call(item)
+            subMenu.setNoIcon()
+            this.populateMenu(subMenu, actionEntry.sub, pos)
+          } else {
+            item.onClick(() => this.showContextMenu(actionEntry.sub!, pos))
+          }
+        } else if (actionEntry.action) {
+          item.onClick(() => actionEntry.action!())
+        }
+      })
+    }
+  }
+
   private teardown() {
     if (this.saveTimer !== null) window.clearTimeout(this.saveTimer)
     this.saveTimer = null
@@ -249,6 +286,19 @@ class DesignView extends FileView {
     this.host = null
     this.contentEl.empty()
   }
+}
+
+function menuTitle(label: string, shortcut?: string): string | DocumentFragment {
+  if (!shortcut) return label
+  const frag = document.createDocumentFragment()
+  const title = document.createElement('span')
+  title.className = 'op-menu-label'
+  title.textContent = label
+  const kbd = document.createElement('span')
+  kbd.className = 'op-menu-kbd'
+  kbd.textContent = shortcut
+  frag.append(title, kbd)
+  return frag
 }
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {

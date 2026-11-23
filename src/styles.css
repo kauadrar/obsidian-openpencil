@@ -735,3 +735,17 @@
 .op-shell .op-prop-note.is-warning {
   color: var(--text-error, #f24822);
 }
+
+/* Native Obsidian Menu shortcut alignment */
+.menu-item-title:has(> .op-menu-kbd) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+}
+.op-menu-kbd {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}

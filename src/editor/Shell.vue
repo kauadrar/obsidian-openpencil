@@ -2,14 +2,18 @@
 // The editor shell, laid out like OpenPencil's own window: a sidebar with pages and layers,
 // the canvas with rulers, and a floating icon toolbar. Built from @open-pencil/vue's unstyled
 // primitives; the look lives in styles.css under .op-shell.
-import { computed, defineComponent, h, ref, type Ref } from 'vue'
+import { computed, defineComponent, h, inject, ref, type Ref } from 'vue'
 import { EDITOR_TOOLS, type Editor, type Tool } from '@open-pencil/core'
 import { CanvasRoot, CanvasSurface } from '@open-pencil/vue/canvas'
 import { ToolbarRoot } from '@open-pencil/vue/primitives/Toolbar'
 import { PageListRoot } from '@open-pencil/vue/primitives/PageList'
 import { LayerTreeRoot, LayerTreeItem } from '@open-pencil/vue/primitives/LayerTree'
+import { formatShortcut } from '@open-pencil/vue/editor/commands'
 import { useEditorKeyboard } from '@open-pencil/vue/editor/keyboard'
+import { useMenuModel, type MenuEntry } from '@open-pencil/vue/editor/menu-model'
 import DesignPanel from './DesignPanel.vue'
+import { copySelection, cutSelection, pasteSelection } from './clipboard'
+import { SHOW_CONTEXT_MENU, type ContextMenuEntry } from './context'
 import { createAppShortcuts } from './shortcuts'
 import {
   CHEVRON_DOWN_ICON,
@@ -35,6 +39,72 @@ useEditorKeyboard({
   shortcuts: createAppShortcuts(props.editor, () => emit('save')),
 })
 const showRulers = computed(() => (props.editor.state as typeof props.editor.state & { showRulers?: boolean }).showRulers !== false)
+
+const showContextMenu = inject(SHOW_CONTEXT_MENU, null)
+const { canvasMenu } = useMenuModel()
+
+function toContextEntries(entries: readonly MenuEntry[]): ContextMenuEntry[] {
+  return entries.map((entry) =>
+    entry.separator
+      ? { separator: true }
+      : {
+          label: entry.label,
+          shortcut: entry.shortcut,
+          disabled: entry.disabled,
+          checked: entry.checked,
+          action: entry.action,
+          sub: entry.sub ? toContextEntries(entry.sub) : undefined,
+        },
+  )
+}
+
+function buildContextMenu(event: MouseEvent, cursorPos?: { x: number; y: number }) {
+  if (!showContextMenu) return
+  const hasSelection = props.editor.state.selectedIds.size > 0
+  const clipboardGroup: ContextMenuEntry[] = [
+    {
+      label: 'Copy',
+      shortcut: formatShortcut('Mod+C'),
+      disabled: !hasSelection,
+      action: () => void copySelection(props.editor),
+    },
+    {
+      label: 'Cut',
+      shortcut: formatShortcut('Mod+X'),
+      disabled: !hasSelection,
+      action: () => void cutSelection(props.editor),
+    },
+    {
+      label: 'Paste',
+      shortcut: formatShortcut('Mod+V'),
+      action: () => void pasteSelection(props.editor, cursorPos),
+    },
+    { separator: true },
+  ]
+  showContextMenu([...clipboardGroup, ...toContextEntries(canvasMenu.value)], {
+    x: event.clientX,
+    y: event.clientY,
+  })
+}
+
+function onCanvasContextMenu(event: MouseEvent) {
+  const el = event.currentTarget as HTMLElement | null
+  const rect = el?.getBoundingClientRect()
+  if (!rect) return
+  const pos = props.editor.screenToCanvas(event.clientX - rect.left, event.clientY - rect.top)
+  const hit = props.editor.hitTestAtPoint(pos.x, pos.y, event.metaKey || event.ctrlKey)
+  if (hit) {
+    if (!props.editor.state.selectedIds.has(hit.id)) props.editor.select([hit.id])
+  } else {
+    props.editor.clearSelection()
+  }
+  buildContextMenu(event, pos)
+}
+
+function onLayerContextMenu(nodeId: string, event: MouseEvent) {
+  if (!props.editor.state.selectedIds.has(nodeId)) props.editor.select([nodeId])
+  buildContextMenu(event)
+}
 
 /** An inline 16×16 stroke icon. */
 const Icon = defineComponent({
@@ -164,6 +234,7 @@ function finishRename(rename: (name: string) => void, e: Event) {
                 :style="{ paddingLeft: `calc(${padLeft} + 4px)` }"
                 @click="actions.select($event.shiftKey || $event.metaKey)"
                 @dblclick="editingLayer = node.id"
+                @contextmenu.prevent.stop="onLayerContextMenu(row.node.id, $event)"
               >
                 <button
                   class="op-twisty"
@@ -213,7 +284,7 @@ function finishRename(rename: (name: string) => void, e: Event) {
 
     <main class="op-canvas">
       <CanvasRoot :key="showRulers ? 'rulers' : 'no-rulers'" :show-rulers="showRulers" @ready="onReady" @failed="onFailed">
-        <CanvasSurface class="op-surface" />
+        <CanvasSurface class="op-surface" @contextmenu.prevent="onCanvasContextMenu" />
       </CanvasRoot>
 
       <button v-if="!sidebarOpen" class="op-icon-btn op-sidebar-toggle" title="Show sidebar" @click="sidebarOpen = true">
