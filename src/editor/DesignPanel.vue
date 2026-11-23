@@ -3,7 +3,7 @@
 // appearance, typography, fill and stroke for a selection. Edits go through @open-pencil/vue's
 // controls, so they are undoable and follow multi-selection ("Mixed") like the app's panel.
 import { computed, inject, ref, watch } from 'vue'
-import type { Fill, Stroke } from '@open-pencil/scene-graph'
+import type { BlendMode, Fill, Stroke } from '@open-pencil/scene-graph'
 import { clearNodeFillOkHCL, clearNodeStrokeOkHCL, getFillOkHCL, getStrokeOkHCL } from '@open-pencil/scene-graph/color'
 import type { Color } from '@open-pencil/scene-graph/primitives'
 import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
@@ -133,11 +133,70 @@ const pageIsDefault = computed(() =>
 )
 
 // ---- Appearance
+const BLEND_MODES: { value: BlendMode; label: string; containerOnly?: boolean }[] = [
+  { value: 'PASS_THROUGH', label: 'Pass through', containerOnly: true },
+  { value: 'NORMAL', label: 'Normal' },
+  { value: 'DARKEN', label: 'Darken' },
+  { value: 'MULTIPLY', label: 'Multiply' },
+  { value: 'LINEAR_BURN', label: 'Plus darker' },
+  { value: 'COLOR_BURN', label: 'Color burn' },
+  { value: 'LIGHTEN', label: 'Lighten' },
+  { value: 'SCREEN', label: 'Screen' },
+  { value: 'LINEAR_DODGE', label: 'Plus lighter' },
+  { value: 'COLOR_DODGE', label: 'Color dodge' },
+  { value: 'OVERLAY', label: 'Overlay' },
+  { value: 'SOFT_LIGHT', label: 'Soft light' },
+  { value: 'HARD_LIGHT', label: 'Hard light' },
+  { value: 'DIFFERENCE', label: 'Difference' },
+  { value: 'EXCLUSION', label: 'Exclusion' },
+  { value: 'HUE', label: 'Hue' },
+  { value: 'SATURATION', label: 'Saturation' },
+  { value: 'COLOR', label: 'Color' },
+  { value: 'LUMINOSITY', label: 'Luminosity' },
+]
+const canPassThrough = computed(() =>
+  nodes.value.length > 0 &&
+  nodes.value.every((n) => ['FRAME', 'GROUP', 'COMPONENT', 'COMPONENT_SET', 'INSTANCE', 'SECTION'].includes(n.type)),
+)
+const blendModeOptions = computed(() => BLEND_MODES.filter((m) => !m.containerOnly || canPassThrough.value))
+const blendMode = computed(() => merged('blendMode'))
 const opacity = computed(() => num(merged('opacity')))
 const radius = computed(() => num(merged('cornerRadius')))
+const independentCorners = computed(() => {
+  void editor.state.sceneVersion
+  return nodes.value.some((n) => n.independentCorners)
+})
+const topLeftRadius = computed(() => num(merged('topLeftRadius')))
+const topRightRadius = computed(() => num(merged('topRightRadius')))
+const bottomLeftRadius = computed(() => num(merged('bottomLeftRadius')))
+const bottomRightRadius = computed(() => num(merged('bottomRightRadius')))
 const hasRadius = computed(() =>
   nodes.value.some((n) => ['RECTANGLE', 'ROUNDED_RECTANGLE', 'FRAME', 'COMPONENT', 'INSTANCE', 'IMAGE'].includes(n.type)),
 )
+const maxCornerRadius = computed(() => {
+  const n = node.value
+  return n ? Math.max(0, Math.floor(Math.min(n.width, n.height) / 2)) : Infinity
+})
+function clampRadius(v: number): number {
+  return Math.min(maxCornerRadius.value, Math.max(0, v))
+}
+function toggleIndependentCorners() {
+  const next = !independentCorners.value
+  editor.undo.runBatch('Toggle independent corners', () => {
+    for (const n of nodes.value) {
+      if (next) {
+        const r = clampRadius(n.cornerRadius)
+        editor.updateNodeWithUndo(
+          n.id,
+          { independentCorners: true, topLeftRadius: r, topRightRadius: r, bottomLeftRadius: r, bottomRightRadius: r },
+          'Toggle independent corners',
+        )
+      } else {
+        editor.updateNodeWithUndo(n.id, { independentCorners: false }, 'Toggle independent corners')
+      }
+    }
+  })
+}
 
 // ---- Stroke
 const strokeWeight = computed(() => num(merged('strokeWeight')))
@@ -317,12 +376,47 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
       <section class="op-prop">
         <div class="op-prop-head">Appearance</div>
         <div class="op-grid2">
+          <label class="op-field">
+            <select
+              :value="typeof blendMode === 'string' ? blendMode : ''"
+              aria-label="Blend mode"
+              @change="(e: Event) => updateAllWithUndo({ blendMode: (e.target as HTMLSelectElement).value as BlendMode }, 'Change blend mode')"
+            >
+              <option v-if="typeof blendMode !== 'string'" value="" disabled>Mixed</option>
+              <option v-for="m in blendModeOptions" :key="m.value" :value="m.value">{{ m.label }}</option>
+            </select>
+          </label>
           <NumField label="◐" title="Opacity" suffix="%" :digits="0" :min="0" :max="100"
             :value="typeof opacity === 'number' ? opacity * 100 : opacity"
             @commit="(v: number) => updateAllWithUndo({ opacity: v / 100 }, 'Change opacity')" />
-          <NumField v-if="hasRadius" label="◜" title="Corner radius" :min="0"
+        </div>
+        <div v-if="hasRadius" class="op-grid2" style="margin-top: 4px">
+          <NumField v-if="!independentCorners" label="◜" title="Corner radius" :min="0" :max="maxCornerRadius"
             :value="radius"
-            @commit="(v: number) => updateAllWithUndo({ cornerRadius: v }, 'Change corner radius')" />
+            @commit="(v: number) => updateAllWithUndo({ cornerRadius: clampRadius(v) }, 'Change corner radius')" />
+          <span v-else class="op-prop-note">Corners</span>
+          <button
+            type="button"
+            class="op-icon-btn"
+            :class="{ 'is-on': independentCorners }"
+            title="Independent corner radii"
+            aria-label="Independent corner radii"
+            @click="toggleIndependentCorners"
+          >
+            <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25">
+              <path d="M3 6V3h3M10 3h3v3M13 10v3h-3M6 13H3v-3" />
+            </svg>
+          </button>
+        </div>
+        <div v-if="hasRadius && independentCorners" class="op-grid2" style="margin-top: 4px">
+          <NumField label="TL" title="Top-left radius" :min="0" :max="maxCornerRadius" :value="topLeftRadius"
+            @commit="(v: number) => updateAllWithUndo({ topLeftRadius: clampRadius(v) }, 'Change top-left radius')" />
+          <NumField label="TR" title="Top-right radius" :min="0" :max="maxCornerRadius" :value="topRightRadius"
+            @commit="(v: number) => updateAllWithUndo({ topRightRadius: clampRadius(v) }, 'Change top-right radius')" />
+          <NumField label="BL" title="Bottom-left radius" :min="0" :max="maxCornerRadius" :value="bottomLeftRadius"
+            @commit="(v: number) => updateAllWithUndo({ bottomLeftRadius: clampRadius(v) }, 'Change bottom-left radius')" />
+          <NumField label="BR" title="Bottom-right radius" :min="0" :max="maxCornerRadius" :value="bottomRightRadius"
+            @commit="(v: number) => updateAllWithUndo({ bottomRightRadius: clampRadius(v) }, 'Change bottom-right radius')" />
         </div>
       </section>
 
