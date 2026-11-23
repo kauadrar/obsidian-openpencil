@@ -21,6 +21,7 @@ export function parseExportScale(text: string): number | null {
   const cleaned = text.trim().replace(/\s*[x×X]$/, '').replace(',', '.')
   if (!/^\d+(\.\d+)?$|^\.\d+$/.test(cleaned)) return null
   const value = Number(cleaned)
-  if (!Number.isFinite(value) || value <= 0) return null
+  if (!Number.isFinite(value)) return null
+  // Zero and anything below the minimum clamp up to 0.01, as the field's range says.
   return Math.min(EXPORT_SCALE_MAX, Math.max(EXPORT_SCALE_MIN, value))
 }

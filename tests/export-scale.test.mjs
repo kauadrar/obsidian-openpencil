@@ -11,6 +11,8 @@ test('a typed scale parses with or without the x, and with a decimal comma', () 
 })
 
 test('out-of-range scales clamp to 0.01–1024', () => {
+  assert.equal(parseExportScale('0'), 0.01)
+  assert.equal(parseExportScale('0.0'), 0.01)
   assert.equal(parseExportScale('0.001'), 0.01)
   assert.equal(parseExportScale('5000x'), 1024)
 })
@@ -18,7 +20,7 @@ test('out-of-range scales clamp to 0.01–1024', () => {
 test('text that is not a scale reverts (null)', () => {
   assert.equal(parseExportScale(''), null)
   assert.equal(parseExportScale('abc'), null)
-  assert.equal(parseExportScale('0'), null)
+  assert.equal(parseExportScale('0'), 0.01)
   assert.equal(parseExportScale('-2'), null)
   assert.equal(parseExportScale('1.5px'), null)
 })
