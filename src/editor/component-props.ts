@@ -30,3 +30,30 @@ export function splitOverrideControls<C extends { type: string }>(controls: read
     variants: controls.filter((c) => c.type === 'VARIANT'),
   }
 }
+
+/** The node ids in a subtree, the root included. */
+export function subtreeIds(
+  rootId: string,
+  lookup: (id: string) => { childIds?: readonly string[] } | undefined,
+): Set<string> {
+  const ids = new Set<string>()
+  const walk = (id: string) => {
+    if (ids.has(id)) return
+    ids.add(id)
+    for (const child of lookup(id)?.childIds ?? []) walk(child)
+  }
+  walk(rootId)
+  return ids
+}
+
+/**
+ * The default an Instance swap property starts with: the first component in the file that is not the
+ * owner or inside it, since a component cannot hold an instance of itself. Null when there is none.
+ * Core rejects an instance-swap property whose default is not a component.
+ */
+export function swapDefaultFor(
+  nodes: readonly { id: string; type: string }[],
+  excluded: ReadonlySet<string>,
+): string | null {
+  return nodes.find((n) => n.type === 'COMPONENT' && !excluded.has(n.id))?.id ?? null
+}

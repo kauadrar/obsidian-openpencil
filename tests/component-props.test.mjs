@@ -40,3 +40,30 @@ test('splitOverrideControls separates variant selects from the property controls
   assert.deepEqual(properties.map((c) => c.id), ['a', 'c'])
   assert.deepEqual(variants.map((c) => c.id), ['b'])
 })
+
+import { subtreeIds, swapDefaultFor } from '../src/editor/component-props.ts'
+
+test('subtreeIds includes the root and every descendant', () => {
+  const nodes = new Map([
+    ['root', { childIds: ['a', 'b'] }],
+    ['a', { childIds: ['c'] }],
+    ['b', { childIds: [] }],
+    ['c', { childIds: [] }],
+  ])
+  assert.deepEqual([...subtreeIds('root', (id) => nodes.get(id))].sort(), ['a', 'b', 'c', 'root'])
+})
+
+test('swapDefaultFor picks a component outside the owner, never the owner or its contents', () => {
+  const nodes = [
+    { id: 'owner', type: 'COMPONENT' },
+    { id: 'inner', type: 'COMPONENT' },
+    { id: 'frame', type: 'FRAME' },
+    { id: 'other', type: 'COMPONENT' },
+  ]
+  assert.equal(swapDefaultFor(nodes, new Set(['owner', 'inner'])), 'other')
+})
+
+test('swapDefaultFor returns null when the file has no other component', () => {
+  const nodes = [{ id: 'owner', type: 'COMPONENT' }, { id: 'f', type: 'FRAME' }]
+  assert.equal(swapDefaultFor(nodes, new Set(['owner'])), null)
+})
