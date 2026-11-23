@@ -68,7 +68,7 @@ for (const [name, args] of [
   ['list_documents', {}],
   ['list_recent_documents', {}],
   ['get_settings', {}],
-  ['update_settings', { zoomSpeed: 1 }],
+  ['update_settings', { settings: { zoomSpeed: 1 } }],
   ['get_codegen_prompt', {}],
   ['create_document', { path: '__smoke_mcp__.fig' }],
   ['activate_document', { document_id: '__smoke_mcp__.fig' }],
