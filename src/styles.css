@@ -1994,3 +1994,29 @@
   color: var(--op-text-muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* Effect detail rows: blend mode and "Show behind transparent areas" */
+.op-shell .op-effect-blend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.op-shell .op-effect-blend select {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  font-size: 11px;
+  color: inherit;
+  background: var(--op-hover);
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+.op-shell .op-effect-behind {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--op-text-muted);
+}
