@@ -21,6 +21,7 @@ design editor, inside an Obsidian tab, the way the Excalidraw plugin handles `.e
 - **Export to vault:** write designs out as stable filenames in your vault; re-exporting overwrites the same file.
 - **Embed in notes:** `.fig` files show thumbnails in Reading view and Live Preview.
 - **Settings tab:** snapping and zoom speed.
+- **Insert icon:** search and insert [Iconify](https://iconify.design) icons from the toolbar, at the centre of the view or into the selected frame. **Iconify needs an internet connection.** Offline, the search shows no results and nothing else breaks. Turn it off in the settings tab under **Iconify import**.
 - If a file changes on disk (sync, another app) while you have no unsaved edits, the tab reloads it.
 - Desktop only.
 

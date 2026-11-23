@@ -2028,3 +2028,87 @@
   font-size: 11px;
   text-align: center;
 }
+
+/* Insert icon popover */
+.op-icon-popover {
+  box-sizing: border-box;
+  z-index: 1000;
+  width: 264px;
+  padding: 8px;
+  border-radius: var(--radius-m);
+  background: var(--op-bg, var(--background-primary));
+  border: 1px solid var(--op-border, var(--background-modifier-border));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  font-size: 11px;
+  color: var(--op-text, var(--text-normal));
+}
+.op-icon-popover-head {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.op-icon-search,
+.op-icon-set {
+  box-sizing: border-box;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 11px;
+  color: inherit;
+  background: var(--op-hover);
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+.op-icon-search {
+  flex: 1;
+  min-width: 0;
+}
+.op-icon-search:focus,
+.op-icon-set:focus {
+  outline: none;
+  border-color: var(--interactive-accent, #7c3aed);
+}
+.op-icon-status {
+  padding: 6px 2px;
+  color: var(--text-muted);
+}
+.op-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.op-icon-cell {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.op-icon-cell:hover,
+.op-icon-cell:focus-visible {
+  background: var(--op-hover);
+}
+.op-icon-cell img {
+  width: 20px;
+  height: 20px;
+}
+.op-icon-cell-pending {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--op-hover);
+}
+.op-icon-more {
+  all: unset;
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 4px 0;
+  text-align: center;
+  cursor: pointer;
+  color: var(--op-accent, var(--interactive-accent));
+}

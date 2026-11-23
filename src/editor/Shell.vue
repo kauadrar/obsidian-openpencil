@@ -8,6 +8,8 @@ import { CanvasRoot, CanvasSurface, useCanvasContext, useCanvasInput } from '@op
 import { useTextEdit } from '@open-pencil/vue/canvas/text-edit'
 import { toolCursor } from '@open-pencil/vue/editor/tool-cursor'
 import { ToolbarRoot } from '@open-pencil/vue/primitives/Toolbar'
+import { readIcon } from '@open-pencil/scene-graph/icons'
+import IconInsertPopover from './IconInsertPopover.vue'
 import { PageListRoot } from '@open-pencil/vue/primitives/PageList'
 import { LayerTreeRoot, LayerTreeItem } from '@open-pencil/vue/primitives/LayerTree'
 import AssetsPanel from './AssetsPanel.vue'
@@ -135,7 +137,11 @@ function buildContextMenu(event: MouseEvent, cursorPos?: { x: number; y: number 
     if (entry.id === 'selection.toggleLock') return { ...entry, label: (node?.locked ?? false) ? 'Unlock' : 'Lock' }
     return entry
   })
-  showContextMenu([...clipboardGroup, ...toContextEntries(entries)], {
+  // An icon (a frame that holds one) can be detached into its plain paths.
+  const icon = props.editor.getSelectedNode()
+  const iconGroup: ContextMenuEntry[] =
+    icon && readIcon(icon) ? [{ label: 'Detach icon', action: () => props.editor.detachIcon(icon.id) }, { separator: true }] : []
+  showContextMenu([...iconGroup, ...clipboardGroup, ...toContextEntries(entries)], {
     x: event.clientX,
     y: event.clientY,
   })
@@ -711,6 +717,7 @@ defineExpose({ canRunCommand, runCommand, placeFiles })
               </button>
             </div>
           </div>
+          <IconInsertPopover v-if="iconifyImport && !readOnly && !previewOnly" :editor="editor" />
         </div>
       </ToolbarRoot>
 
