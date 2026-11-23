@@ -265,7 +265,7 @@ const gamutLabel = computed(() => (props.okhcl?.previewColorSpace === 'display-p
               class="op-cp-slider"
               @update:model-value="(v) => model.updateOkHCLChannel('c', v)"
             >
-              <ChannelSliderTrack class="op-cp-track" :style="{ background: model.okhclSliderGradient.value.okhclChroma }">
+              <ChannelSliderTrack class="op-cp-track" :style="model.okhclSliderGradient.value.okhclChroma">
                 <ChannelSliderThumb class="op-cp-thumb" />
               </ChannelSliderTrack>
             </ChannelSliderRoot>
@@ -279,7 +279,7 @@ const gamutLabel = computed(() => (props.okhcl?.previewColorSpace === 'display-p
               class="op-cp-slider"
               @update:model-value="(v) => model.updateOkHCLChannel('l', v)"
             >
-              <ChannelSliderTrack class="op-cp-track" :style="{ background: model.okhclSliderGradient.value.okhclLightness }">
+              <ChannelSliderTrack class="op-cp-track" :style="model.okhclSliderGradient.value.okhclLightness">
                 <ChannelSliderThumb class="op-cp-thumb" />
               </ChannelSliderTrack>
             </ChannelSliderRoot>
