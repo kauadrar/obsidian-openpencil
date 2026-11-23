@@ -258,6 +258,13 @@ const sidebarOpen = ref(true)
 const zoomMenuOpen = ref(false)
 const status = ref<'loading' | 'ready' | 'failed'>('loading')
 const error = ref('')
+const pageSheetOpen = ref(false)
+
+function selectPreviewPage(switchPage: (id: string) => void, pageId: string) {
+  switchPage(pageId)
+  pageSheetOpen.value = false
+  requestAnimationFrame(() => props.editor.zoomToFit())
+}
 
 function onReady() {
   status.value = 'ready'
@@ -663,6 +670,36 @@ defineExpose({ canRunCommand, runCommand, placeFiles })
       <!-- Bottom-left: the top-right of a view is where other Obsidian plugins draw status overlays. -->
       <button class="op-zoom" title="Zoom" @click="zoomMenuOpen = !zoomMenuOpen">{{ Math.round(editor.state.zoom * 100) }}%</button>
       <ZoomMenu v-if="zoomMenuOpen" :editor="editor" @close="zoomMenuOpen = false" />
+
+      <PageListRoot v-if="previewOnly" v-slot="{ pages, currentPageId, isDivider, actions }">
+        <template v-if="pages.filter((p) => !isDivider(p)).length > 1">
+          <button
+            class="op-preview-page-btn"
+            :aria-expanded="pageSheetOpen"
+            @click="pageSheetOpen = !pageSheetOpen"
+          >
+            <span class="op-preview-page-label">
+              {{ pages.find((p) => p.id === currentPageId)?.name ?? 'Page' }}
+            </span>
+            <Icon :svg="CHEVRON_DOWN_ICON" :size="12" />
+          </button>
+          <div v-if="pageSheetOpen" class="op-preview-page-backdrop" @click="pageSheetOpen = false">
+            <div class="op-preview-page-sheet" role="dialog" aria-label="Pages" @click.stop>
+              <div class="op-preview-page-sheet-head">Pages</div>
+              <button
+                v-for="page in pages.filter((p) => !isDivider(p))"
+                :key="page.id"
+                class="op-preview-page-item"
+                :class="{ 'is-active': page.id === currentPageId }"
+                @click="selectPreviewPage(actions.switch, page.id)"
+              >
+                <Icon :svg="PAGE_ICON" :size="14" />
+                <span>{{ page.name }}</span>
+              </button>
+            </div>
+          </div>
+        </template>
+      </PageListRoot>
 
       <div v-if="readOnly && !previewOnly" class="op-banner">
         OpenPencil can't write this file format. Run “Save as .fig” to keep your edits.
