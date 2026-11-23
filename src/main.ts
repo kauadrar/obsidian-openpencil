@@ -225,7 +225,9 @@ export default class OpenPencilPlugin extends Plugin {
             if (view.isDirty()) {
               if (unsaved === 'save') {
                 await view.save()
-              } else if (unsaved !== 'discard') {
+              } else if (unsaved === 'discard') {
+                view.discardChanges()
+              } else {
                 throw new Error(`Document has unsaved changes: ${normalized}`)
               }
             }
@@ -412,6 +414,14 @@ class DesignView extends FileView {
 
   isDirty(): boolean {
     return this.dirty
+  }
+
+  discardChanges(): void {
+    this.dirty = false
+    if (this.saveTimer !== null) {
+      window.clearTimeout(this.saveTimer)
+      this.saveTimer = null
+    }
   }
 
   async executeMcpTool(command: string, args: Record<string, unknown>): Promise<unknown> {
