@@ -594,13 +594,16 @@ try {
     await page.locator('.op-cp-select').selectOption('okhcl')
     const okhclInfo = await page.evaluate(() => {
       const pop = document.querySelector('.op-cp-popover')
+      const tracks = Array.from(pop?.querySelectorAll('.op-cp-track') ?? [])
+      const trackGradients = tracks.map((t) => getComputedStyle(t).backgroundImage)
       return {
         sliders: pop?.querySelectorAll('.op-cp-slider').length ?? 0,
         hasGamut: !!pop?.querySelector('.op-cp-gamut'),
+        allGradients: trackGradients.length === 4 && trackGradients.every((g) => g.includes('linear-gradient')),
       }
     })
-    check('OkHCL mode shows Hue/Chroma/Lightness/Alpha sliders and gamut badge',
-      okhclInfo.sliders === 4 && okhclInfo.hasGamut,
+    check('OkHCL mode shows Hue/Chroma/Lightness/Alpha sliders with visible gradients and gamut badge',
+      okhclInfo.sliders === 4 && okhclInfo.hasGamut && okhclInfo.allGradients,
       JSON.stringify(okhclInfo))
 
     // Switch back to RGB and verify SV square + Hue + Alpha sliders actually change colour.
