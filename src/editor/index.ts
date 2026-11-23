@@ -7,7 +7,7 @@ import '@open-pencil/core/runtime-assets/install'
 
 import { createApp, defineComponent, h, provide, reactive, ref, type App as VueApp } from 'vue'
 import { WRITE_EXPORT, type WriteExport } from './context'
-import { createDefaultEditorState, createDocumentGraph, createEditor, type Editor } from '@open-pencil/core'
+import { createDefaultEditorState, createDocumentGraph, createEditor, type Editor, type Tool } from '@open-pencil/core'
 import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
 import { setPageBackgrounds } from '@open-pencil/core/figma-api'
 import { exportFigFile, parseFigFile, setFigCanvasCompressor } from '@open-pencil/core/io/formats/fig'
@@ -123,6 +123,11 @@ function fillMissingPageBackgrounds(graph: SceneGraph, theme: Theme) {
 /** Asked of OpenPencil itself, so the plugin follows it if it learns to write .pen. */
 const penWritable = !!penFormat.support.writeDocument && !!penFormat.writeDocument
 
+const DESIGN_TOOLS: Tool[] = [
+  'SELECT', 'SCALE', 'FRAME', 'SECTION', 'RECTANGLE', 'LINE', 'ELLIPSE', 'POLYGON', 'STAR',
+  'PEN', 'PENCIL', 'TEXT', 'HAND', 'EYEDROPPER',
+]
+
 export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<MountedEditor> {
   const graph = await readGraph(opts)
   const theme = obsidianTheme()
@@ -141,6 +146,10 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
       return { width: canvas.clientWidth || 800, height: canvas.clientHeight || 600 }
     },
   })
+
+  // A design file offers no board tools (sticky, shape, connector) and no Comment (out of scope):
+  // restricting the tool state also drops their keys, not just their toolbar buttons.
+  editor.setHostRestrictions({ tools: new Set(DESIGN_TOOLS) })
 
   const applyTheme = (t: Theme) => {
     editor.state.theme = t

@@ -56,6 +56,17 @@ try {
       fig.names.includes('Smoke rect') && fig.names.includes('Smoke ellipse'))
     // The SDK only lets you drag guides out of the rulers when this flag is set.
     check('rulers accept guides', await page.evaluate(() => window.smokeEditor.state.showRulers === true))
+    // Design files have no Comment tool: neither the key nor the tool state may arm it.
+    const tool = await page.evaluate(() => {
+      const ed = window.smokeEditor
+      ed.setTool('SELECT')
+      ed.setTool('COMMENT')
+      return ed.state.activeTool
+    })
+    check('Comment tool cannot be armed', tool === 'SELECT', `active tool: ${tool}`)
+    await page.mouse.move(600, 300)
+    await page.keyboard.press('c')
+    check('C key does not arm Comment', await page.evaluate(() => window.smokeEditor.state.activeTool) === 'SELECT')
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
