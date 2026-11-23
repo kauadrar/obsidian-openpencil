@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.0 highlights
+
+* **iOS (beta):** a read-only preview on iPhone and iPad. Pan with one finger, pinch to zoom, double-tap to fit, and switch pages from the top-left button. It never changes your file. Android is not verified yet.
+* **Variables:** bind number and colour fields to variables; the page's Variables section manages them, with modes.
+* **Assets tab:** components grouped by page with real thumbnails; drag or insert them with **+**.
+* **Layers:** Shift-click to select a range; click a selected layer to rename it.
+* **Components:** Properties on main components (Text, Boolean, Instance swap), plus instance overrides and variants. Cmd/Ctrl+Z now undoes a Boolean override tick.
+* **Frame presets:** pick a preset for a selected frame, or from the list while the Frame tool is active.
+* **Effects:** drop, inner, layer and background blur; blend mode; show-behind; bindable shadow values.
+* **Insert icon:** search Iconify icons from the toolbar and detach icons. **Iconify needs a connection**; offline, the search shows no results. Turn it off under **Iconify import**.
+* **Export scale:** type any scale, or pick a preset. A scale of 0 clamps to 0.01.
+* **Fonts:** the picker shows BUNDLED and system fonts. Google Fonts and Fontsource listings are not available yet.
+* **In-plugin MCP server** for desktop Obsidian, loaded only when needed.
+
+Fixes found while testing this release: the colour picker stays open when a fill changes tab.
+
 ## [0.3.0](https://github.com/kauadrar/obsidian-openpencil/compare/0.2.0...0.3.0) (2026-11-23)
 
 
