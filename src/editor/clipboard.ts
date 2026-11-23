@@ -41,19 +41,31 @@ async function readClipboardHTML(): Promise<string | null> {
 /** Copies the current selection (or only its style properties) to the system clipboard. */
 export async function copySelection(editor: Editor, properties = false): Promise<boolean> {
   if (editor.state.selectedIds.size === 0) return false
-  const payload = await editor.prepareCopy(properties ? { properties: true } : undefined)
-  if (!payload.snapshot) return false
-  if (properties) lastProperties = payload.snapshot
-  else lastCopied = payload.snapshot
-  await writeClipboard(payload.html, payload.plainText)
-  return true
+  try {
+    const payload = await editor.prepareCopy(properties ? { properties: true } : undefined)
+    if (!payload.snapshot) return false
+    if (properties) lastProperties = payload.snapshot
+    else lastCopied = payload.snapshot
+    void writeClipboard(payload.html, payload.plainText)
+    return true
+  } catch {
+    return false
+  }
 }
 
 /** Copies the current selection and deletes it in one undoable step. */
 export async function cutSelection(editor: Editor): Promise<void> {
-  if (await copySelection(editor, false)) {
-    editor.deleteSelected()
+  if (editor.state.selectedIds.size === 0) return
+  try {
+    const payload = await editor.prepareCopy()
+    if (payload.snapshot) {
+      lastCopied = payload.snapshot
+      void writeClipboard(payload.html, payload.plainText)
+    }
+  } catch {
+    // Still delete the selection even if clipboard encoding fails.
   }
+  editor.deleteSelected()
 }
 
 /** Pastes layers from the system clipboard (or in-memory fallback), optionally at a canvas point. */

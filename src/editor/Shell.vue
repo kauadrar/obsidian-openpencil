@@ -41,11 +41,12 @@ useEditorKeyboard({
 const showRulers = computed(() => (props.editor.state as typeof props.editor.state & { showRulers?: boolean }).showRulers !== false)
 
 const showContextMenu = inject(SHOW_CONTEXT_MENU, null)
-const { canvasMenu, selectionLabelMenu } = useMenuModel()
+const { canvasMenu } = useMenuModel()
 
 function contextLabel(entry: Exclude<MenuEntry, { separator: true }>): string {
-  if (entry.id === 'selection.toggleVisibility') return selectionLabelMenu.value.visibility
-  if (entry.id === 'selection.toggleLock') return selectionLabelMenu.value.lock
+  const node = props.editor.getSelectedNode()
+  if (entry.id === 'selection.toggleVisibility') return (node?.visible ?? true) ? 'Hide' : 'Show'
+  if (entry.id === 'selection.toggleLock') return (node?.locked ?? false) ? 'Unlock' : 'Lock'
   return entry.label
 }
 

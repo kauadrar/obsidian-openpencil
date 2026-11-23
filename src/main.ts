@@ -297,7 +297,7 @@ function menuTitle(label: string, shortcut?: string): string | DocumentFragment 
   const kbd = document.createElement('span')
   kbd.className = 'op-menu-kbd'
   kbd.textContent = shortcut
-  frag.append(title, kbd)
+  frag.append(title, '  ', kbd)
   return frag
 }
 

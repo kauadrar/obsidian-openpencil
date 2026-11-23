@@ -233,6 +233,28 @@ try {
     await page.locator('.op-layer', { hasText: 'KB A' }).click({ button: 'right' })
     const multi = await page.evaluate(() => (window.smokeLastMenu?.entries ?? []).some((e) => e.label === 'Auto arrange'))
     check('Auto arrange shown for 2+ selected layers', multi)
+
+    // Toggle visibility via menu action and immediately re-open menu on same selection: label must flip.
+    await page.evaluate((ids) => window.smokeEditor.select([ids.a]), setupIds)
+    await page.locator('.op-layer', { hasText: 'KB A' }).click({ button: 'right' })
+    await page.evaluate(() => window.smokeLastMenu?.entries.find((e) => e.label === 'Show')?.action?.())
+    await page.locator('.op-layer', { hasText: 'KB A' }).click({ button: 'right' })
+    const flippedLabel = await page.evaluate(() => (window.smokeLastMenu?.entries ?? []).some((e) => e.label === 'Hide'))
+    check('Hide/Show label updates immediately on same selection', flippedLabel)
+
+    // Cut menu action removes layer and Undo restores it.
+    await page.evaluate((ids) => {
+      window.smokeEditor.updateNode(ids.a, { locked: false, visible: true })
+      window.smokeEditor.select([ids.a])
+    }, setupIds)
+    await page.locator('.op-layer', { hasText: 'KB A' }).click({ button: 'right' })
+    await page.evaluate(() => window.smokeLastMenu?.entries.find((e) => e.label === 'Cut')?.action?.())
+    await page.waitForTimeout(50)
+    const afterCut = await page.evaluate((id) => window.smokeEditor.graph.getNode(id) == null, setupIds.a)
+    check('Cut menu action removes selected layer', afterCut)
+    await page.keyboard.press(`${mod}+z`)
+    const afterUndoCut = await page.evaluate((id) => window.smokeEditor.graph.getNode(id) != null, setupIds.a)
+    check('Undo restores Cut layer', afterUndoCut)
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
