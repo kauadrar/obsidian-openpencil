@@ -26,6 +26,8 @@ import { useEditorCommands } from '@open-pencil/vue/editor/commands'
 import { AUTO_ARRANGE_GROUPS, type MenuEntry } from '@open-pencil/vue/editor/menu-model'
 import { ColorField, NumField } from './fields'
 import FillField from './FillField.vue'
+import BindableValueRow from './BindableValueRow.vue'
+import PageVariables from './PageVariables.vue'
 import AutoLayoutSection from './AutoLayoutSection.vue'
 import EffectsSection from './EffectsSection.vue'
 import ExportSection from './ExportSection.vue'
@@ -208,6 +210,8 @@ const page = computed(() => {
   void editor.state.sceneVersion
   return editor.graph.getNode(editor.state.currentPageId) ?? null
 })
+// Variable bindings apply to one layer at a time; with several selected the fields stay plain.
+const bindNodeId = computed(() => (!isMulti.value && node.value ? node.value.id : null))
 const pageColor = computed<Color>(() => ({ ...editor.state.pageColor, a: 1 }))
 function setPageColor(color: Color, opacity = editor.state.pageColor.a) {
   const target = page.value
@@ -414,6 +418,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
         <div class="op-prop-head">Document</div>
         <div class="op-prop-note">{{ editor.graph.getPages().length }} page(s) · {{ page?.childIds.length ?? 0 }} top-level layer(s) on this page</div>
       </section>
+      <PageVariables />
       <ExportSection />
     </template>
 
@@ -640,14 +645,18 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
               <option v-for="m in blendModeOptions" :key="m.value" :value="m.value">{{ m.label }}</option>
             </select>
           </label>
-          <NumField label="◐" title="Opacity" suffix="%" :digits="0" :min="0" :max="100"
-            :value="typeof opacity === 'number' ? opacity * 100 : opacity"
-            @commit="(v: number) => updateAllWithUndo({ opacity: v / 100 }, 'Change opacity')" />
+          <BindableValueRow :node-id="bindNodeId" path="opacity" kind="number" :value="opacity">
+            <NumField label="◐" title="Opacity" suffix="%" :digits="0" :min="0" :max="100"
+              :value="typeof opacity === 'number' ? opacity * 100 : opacity"
+              @commit="(v: number) => updateAllWithUndo({ opacity: v / 100 }, 'Change opacity')" />
+          </BindableValueRow>
         </div>
         <div v-if="hasRadius" class="op-grid2" style="margin-top: 4px">
-          <NumField v-if="!independentCorners" label="◜" title="Corner radius" :min="0" :max="maxCornerRadius"
-            :value="radius"
-            @commit="(v: number) => updateAllWithUndo({ cornerRadius: clampRadius(v) }, 'Change corner radius')" />
+          <BindableValueRow v-if="!independentCorners" :node-id="bindNodeId" path="cornerRadius" kind="number" :value="radius">
+            <NumField label="◜" title="Corner radius" :min="0" :max="maxCornerRadius"
+              :value="radius"
+              @commit="(v: number) => updateAllWithUndo({ cornerRadius: clampRadius(v) }, 'Change corner radius')" />
+          </BindableValueRow>
           <span v-else class="op-prop-note">Corners</span>
           <button
             type="button"
@@ -663,14 +672,22 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
           </button>
         </div>
         <div v-if="hasRadius && independentCorners" class="op-grid2" style="margin-top: 4px">
-          <NumField label="TL" title="Top-left radius" :min="0" :max="maxCornerRadius" :value="topLeftRadius"
-            @commit="(v: number) => updateAllWithUndo({ topLeftRadius: clampRadius(v) }, 'Change top-left radius')" />
-          <NumField label="TR" title="Top-right radius" :min="0" :max="maxCornerRadius" :value="topRightRadius"
-            @commit="(v: number) => updateAllWithUndo({ topRightRadius: clampRadius(v) }, 'Change top-right radius')" />
-          <NumField label="BL" title="Bottom-left radius" :min="0" :max="maxCornerRadius" :value="bottomLeftRadius"
-            @commit="(v: number) => updateAllWithUndo({ bottomLeftRadius: clampRadius(v) }, 'Change bottom-left radius')" />
-          <NumField label="BR" title="Bottom-right radius" :min="0" :max="maxCornerRadius" :value="bottomRightRadius"
-            @commit="(v: number) => updateAllWithUndo({ bottomRightRadius: clampRadius(v) }, 'Change bottom-right radius')" />
+          <BindableValueRow :node-id="bindNodeId" path="topLeftRadius" kind="number" :value="topLeftRadius">
+            <NumField label="TL" title="Top-left radius" :min="0" :max="maxCornerRadius" :value="topLeftRadius"
+              @commit="(v: number) => updateAllWithUndo({ topLeftRadius: clampRadius(v) }, 'Change top-left radius')" />
+          </BindableValueRow>
+          <BindableValueRow :node-id="bindNodeId" path="topRightRadius" kind="number" :value="topRightRadius">
+            <NumField label="TR" title="Top-right radius" :min="0" :max="maxCornerRadius" :value="topRightRadius"
+              @commit="(v: number) => updateAllWithUndo({ topRightRadius: clampRadius(v) }, 'Change top-right radius')" />
+          </BindableValueRow>
+          <BindableValueRow :node-id="bindNodeId" path="bottomLeftRadius" kind="number" :value="bottomLeftRadius">
+            <NumField label="BL" title="Bottom-left radius" :min="0" :max="maxCornerRadius" :value="bottomLeftRadius"
+              @commit="(v: number) => updateAllWithUndo({ bottomLeftRadius: clampRadius(v) }, 'Change bottom-left radius')" />
+          </BindableValueRow>
+          <BindableValueRow :node-id="bindNodeId" path="bottomRightRadius" kind="number" :value="bottomRightRadius">
+            <NumField label="BR" title="Bottom-right radius" :min="0" :max="maxCornerRadius" :value="bottomRightRadius"
+              @commit="(v: number) => updateAllWithUndo({ bottomRightRadius: clampRadius(v) }, 'Change bottom-right radius')" />
+          </BindableValueRow>
         </div>
       </section>
 

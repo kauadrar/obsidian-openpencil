@@ -10,6 +10,8 @@ import type { OkHCLControls } from '@open-pencil/vue/controls/color-model'
 import { ColorPickerRoot } from '@open-pencil/vue/primitives/ColorPicker'
 import { FillRoot } from '@open-pencil/vue/primitives/Fill'
 import { GradientEditorBar, GradientEditorRoot } from '@open-pencil/vue/primitives/GradientEditor'
+import { useColorVariableBinding } from '@open-pencil/vue/controls/color-variable-binding'
+import BindableValueRow from './BindableValueRow.vue'
 import ColorPickerBody from './ColorPickerBody.vue'
 import { PICK_IMAGE } from './context'
 import { ColorField, colorToHex, hexToColor, NumField } from './fields'
@@ -32,6 +34,8 @@ const emit = defineEmits<{
 }>()
 
 const editor = useEditor()
+const colorBinding = useColorVariableBinding(props.paint)
+const colorPath = computed(() => colorBinding.bindingPath(props.index))
 const pickVaultImage = inject(PICK_IMAGE, null)
 const bodyRef = ref<InstanceType<typeof ColorPickerBody> | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -232,6 +236,7 @@ function updateStopColor(index: number, c: Color, a: number, updateFill: (f: Fil
 <template>
   <FillRoot :fill="fill" @update="(next) => emit('update', next)">
     <template #default="{ category, swatchBackground, actions }">
+      <BindableValueRow :node-id="category === 'SOLID' ? nodeId : null" :path="colorPath" kind="color" :value="fill.color">
       <div class="op-color">
         <ColorPickerRoot
           :color="combinedColor"
@@ -457,6 +462,7 @@ function updateStopColor(index: number, c: Color, a: number, updateFill: (f: Fil
           @commit="(v) => emit('opacity', v / 100)"
         />
       </div>
+      </BindableValueRow>
     </template>
   </FillRoot>
 </template>
