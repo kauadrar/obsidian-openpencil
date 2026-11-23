@@ -138,13 +138,32 @@ test('createMcpRpcSender dispatches document, app, and core tools', async () => 
   )
 })
 
-test('MCP tool drift test: @open-pencil/mcp tools match @open-pencil/core ALL_TOOLS', () => {
+test('MCP tool drift test: @open-pencil/mcp tools match @open-pencil/core ALL_TOOLS and include all 12 document/app tools', () => {
   const mcpServer = new McpServer({ name: 'drift-check', version: '0.2.0' })
   registerTools(mcpServer, {
     policy: { disabledTools: [], allowEval: false, scope: 'document' },
-    sendRPC: async () => ({}),
+    mcpRoot: '/',
+    sendRPC: async () => ({ ok: true, result: {} }),
   })
-  const descriptors = createToolDescriptors(false)
+  const descriptors = createToolDescriptors(true)
+  const descriptorNames = new Set(descriptors.map((d) => d.name))
+  const requiredDocTools = [
+    'list_documents',
+    'save_document',
+    'open_document',
+    'list_recent_documents',
+    'create_document',
+    'close_document',
+    'activate_document',
+    'undo',
+    'redo',
+    'get_settings',
+    'update_settings',
+    'get_codegen_prompt',
+  ]
+  for (const name of requiredDocTools) {
+    assert.ok(descriptorNames.has(name), `Missing required document/app tool: ${name}`)
+  }
   const coreNames = new Set(ALL_TOOLS.map((t) => t.name))
   for (const desc of descriptors) {
     if (coreNames.has(desc.name)) {
@@ -152,6 +171,54 @@ test('MCP tool drift test: @open-pencil/mcp tools match @open-pencil/core ALL_TO
     }
   }
   assert.ok(descriptors.length > 0, 'Expected @open-pencil/mcp to expose tool descriptors')
+})
+
+test('createMcpRpcSender exercises all 12 document/app tools and headless core tool', async () => {
+  const state = { active: 'a.fig', open: new Set(['a.fig']), settings: { mcpPort: 3978 } }
+  const rpc = createMcpRpcSender({
+    listDocuments: () => [{ path: 'a.fig', name: 'a.fig', open: true, active: true, dirty: false }],
+    openDocument: async (path) => {
+      state.open.add(path)
+      return { path, name: path, open: true, active: true, dirty: false }
+    },
+    closeDocument: async (path) => {
+      state.open.delete(path)
+    },
+    activateDocument: async (path) => {
+      state.active = path
+    },
+    createDocument: async (path) => {
+      state.open.add(path)
+      return { path, name: path, open: true, active: true, dirty: false }
+    },
+    saveDocument: async () => {},
+    listRecentDocuments: () => ['a.fig'],
+    undo: async () => true,
+    redo: async () => true,
+    getSettings: () => state.settings,
+    updateSettings: async (patch) => ({ ...state.settings, ...patch }),
+    getCodegenPrompt: async () => 'prompt',
+    executeCoreTool: async (command, args, documentPath) => ({ command, args, documentPath }),
+  })
+
+  for (const [command, args] of [
+    ['list_documents', {}],
+    ['open_document', { path: 'b.fig' }],
+    ['close_document', { document_id: 'b.fig' }],
+    ['activate_document', { document_id: 'a.fig' }],
+    ['create_document', { path: 'c.fig' }],
+    ['save_document', { document_id: 'a.fig' }],
+    ['list_recent_documents', {}],
+    ['undo', {}],
+    ['redo', {}],
+    ['get_settings', {}],
+    ['update_settings', { zoomSpeed: 1.5 }],
+    ['get_codegen_prompt', {}],
+    ['tool', { name: 'create_shape', document_id: 'a.fig', args: { type: 'RECTANGLE' } }],
+  ]) {
+    const res = await rpc({ command, args })
+    assert.equal(res.ok, true, `${command} should return ok: true`)
+  }
 })
 
 test('MCP initialize succeeds and returns mcp-session-id', async () => {
