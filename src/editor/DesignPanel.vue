@@ -29,6 +29,8 @@ import FillField from './FillField.vue'
 import BindableValueRow from './BindableValueRow.vue'
 import PageVariables from './PageVariables.vue'
 import ComponentProperties from './ComponentProperties.vue'
+import FramePresetSelect from './FramePresetSelect.vue'
+import { readIcon } from '@open-pencil/scene-graph/icons'
 import InstanceProperties from './InstanceProperties.vue'
 import AutoLayoutSection from './AutoLayoutSection.vue'
 import EffectsSection from './EffectsSection.vue'
@@ -212,6 +214,12 @@ const page = computed(() => {
   void editor.state.sceneVersion
   return editor.graph.getNode(editor.state.currentPageId) ?? null
 })
+// The preset select is for one frame that is not an icon (an icon is a glyph, not an artboard).
+const presetFrame = computed(() => {
+  const n = node.value
+  return !isMulti.value && n && n.type === 'FRAME' && !readIcon(n) ? n : null
+})
+
 // Variable bindings apply to one layer at a time; with several selected the fields stay plain.
 const bindNodeId = computed(() => (!isMulti.value && node.value ? node.value.id : null))
 const pageColor = computed<Color>(() => ({ ...editor.state.pageColor, a: 1 }))
@@ -475,6 +483,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
         </template>
       </section>
 
+      <FramePresetSelect v-if="presetFrame" :frame="presetFrame" />
       <section v-if="mask.active.value" class="op-prop op-mask-section">
         <div class="op-prop-head">Mask</div>
         <label class="op-field op-field-wide">
