@@ -1189,3 +1189,27 @@
   font-size: 11px;
   color: var(--text-muted);
 }
+
+/* Spec 19: Stroke settings & per-side weights */
+.op-stroke-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px;
+}
+.op-stroke-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  cursor: pointer;
+}
+.op-stroke-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+.op-stroke-sides {
+  margin-top: 4px;
+}

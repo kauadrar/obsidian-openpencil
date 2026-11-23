@@ -9,6 +9,7 @@ import type { Color } from '@open-pencil/scene-graph/primitives'
 import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
 import { setPageBackgrounds } from '@open-pencil/core/figma-api'
 import { useEditor } from '@open-pencil/vue'
+import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import { PositionControlsRoot } from '@open-pencil/vue/primitives/PositionControls'
 import { TypographyControlsRoot } from '@open-pencil/vue/primitives/TypographyControls'
 import { useNodeProps } from '@open-pencil/vue/controls/node-props'
@@ -141,6 +142,22 @@ const hasRadius = computed(() =>
 // ---- Stroke
 const strokeWeight = computed(() => num(merged('strokeWeight')))
 const strokeAlign = computed(() => strokeControls.currentAlign())
+const hasStrokeSides = computed(() =>
+  nodes.value.length > 0 &&
+  nodes.value.every((n) => ['RECTANGLE', 'ROUNDED_RECTANGLE', 'FRAME', 'COMPONENT', 'INSTANCE'].includes(n.type)),
+)
+const strokeSidesCustom = computed(() => {
+  void editor.state.sceneVersion
+  return nodes.value.some((n) => n.independentStrokeWeights)
+})
+const strokeDash = computed(() => {
+  void editor.state.sceneVersion
+  const s = strokes.items.value[0]
+  return s ? strokeControls.dashState(s) : { on: false, dash: 6, gap: 6 }
+})
+function toggleStrokeSides() {
+  strokeControls.selectSide(strokeSidesCustom.value ? 'ALL' : 'CUSTOM')
+}
 
 // ---- Fill/stroke rows
 const addFill = () => fills.actions.add(structuredClone(defaultFill) as Fill)
@@ -399,10 +416,13 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
         <div v-if="strokes.isMixed.value" class="op-prop-note">Click + to replace mixed strokes</div>
         <template v-else>
           <div v-for="(stroke, i) in strokes.items.value" :key="i" class="op-paint" :class="{ 'is-hidden': !stroke.visible }">
-            <ColorField
-              :color="stroke.color"
-              :opacity="stroke.opacity"
+            <FillField
+              :fill="stroke"
+              :index="i"
+              paint="strokes"
+              :node-id="node?.id ?? null"
               :okhcl="strokeOkHCL(i)"
+              @update="(next: Fill) => strokes.actions.update(i, next as Stroke)"
               @color="(c: Color) => setStrokeColor(i, c)"
               @opacity="(o: number) => strokes.actions.patch(i, { opacity: o })"
             />
@@ -413,7 +433,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
               <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"><path d="M3 8h10" /></svg>
             </button>
           </div>
-          <div v-if="strokes.items.value.length" class="op-grid2">
+          <div v-if="strokes.items.value.length" class="op-stroke-controls">
             <label class="op-field">
               <select
                 :value="typeof strokeAlign === 'string' ? strokeAlign : ''"
@@ -425,6 +445,94 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
             </label>
             <NumField label="≡" title="Stroke weight" :min="0" :value="strokeWeight"
               @commit="(v: number) => updateAllWithUndo({ strokeWeight: v }, 'Change stroke weight')" />
+            <button
+              v-if="hasStrokeSides"
+              type="button"
+              class="op-icon-btn"
+              :class="{ 'is-on': strokeSidesCustom }"
+              title="Individual sides"
+              aria-label="Individual sides"
+              @click="toggleStrokeSides"
+            >
+              <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25">
+                <rect x="3" y="3" width="10" height="10" rx="1" stroke-dasharray="2 2" />
+                <path d="M3 3h10" />
+              </svg>
+            </button>
+            <PopoverRoot>
+              <PopoverTrigger as-child>
+                <button
+                  type="button"
+                  class="op-icon-btn"
+                  :class="{ 'is-on': strokeControls.advancedActive.value }"
+                  title="Stroke settings"
+                  aria-label="Stroke settings"
+                >
+                  <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                    <circle cx="3.5" cy="8" r="1.25" />
+                    <circle cx="8" cy="8" r="1.25" />
+                    <circle cx="12.5" cy="8" r="1.25" />
+                  </svg>
+                </button>
+              </PopoverTrigger>
+              <PopoverPortal>
+                <PopoverContent side="left" :side-offset="8" class="op-cp-popover op-stroke-popover" @keydown.stop>
+                  <div class="op-cp">
+                    <label class="op-stroke-switch">
+                      <span>Dashed stroke</span>
+                      <input
+                        type="checkbox"
+                        :checked="strokeDash.on"
+                        @change="() => { const s = strokes.items.value[0]; if (s) strokes.actions.patch(0, strokeControls.toggleDash(s)) }"
+                      />
+                    </label>
+                    <div v-if="strokeDash.on" class="op-grid2">
+                      <NumField label="Dash" :min="0" :digits="1" :value="strokeDash.dash" @commit="(v: number) => { const s = strokes.items.value[0]; if (s) strokes.actions.patch(0, strokeControls.setDash(s, v)) }" />
+                      <NumField label="Gap" :min="0" :digits="1" :value="strokeDash.gap" @commit="(v: number) => { const s = strokes.items.value[0]; if (s) strokes.actions.patch(0, strokeControls.setGap(s, v)) }" />
+                    </div>
+                    <div class="op-stroke-row">
+                      <span class="op-img-adj-label">Cap</span>
+                      <select
+                        class="op-cp-select"
+                        :value="typeof strokeControls.cap.value === 'string' ? strokeControls.cap.value : ''"
+                        aria-label="Stroke cap"
+                        @change="(e: Event) => strokeControls.setCap((e.target as HTMLSelectElement).value as Stroke['cap'] & string)"
+                      >
+                        <option v-if="typeof strokeControls.cap.value !== 'string'" value="" disabled>Mixed</option>
+                        <option v-for="o in strokeControls.capOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+                      </select>
+                    </div>
+                    <div class="op-stroke-row">
+                      <span class="op-img-adj-label">Join</span>
+                      <select
+                        class="op-cp-select"
+                        :value="typeof strokeControls.join.value === 'string' ? strokeControls.join.value : ''"
+                        aria-label="Stroke join"
+                        @change="(e: Event) => strokeControls.setJoin((e.target as HTMLSelectElement).value as Stroke['join'] & string)"
+                      >
+                        <option v-if="typeof strokeControls.join.value !== 'string'" value="" disabled>Mixed</option>
+                        <option v-for="o in strokeControls.joinOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+                      </select>
+                    </div>
+                    <div class="op-stroke-row">
+                      <span class="op-img-adj-label">Miter limit</span>
+                      <NumField
+                        :min="1"
+                        :digits="2"
+                        :value="typeof strokeControls.miterLimit.value === 'number' ? strokeControls.miterLimit.value : strokeControls.miterLimit.value"
+                        @commit="(v: number) => { strokeControls.updateMiterLimit(v); strokeControls.commitMiterLimit(v) }"
+                      />
+                    </div>
+                  </div>
+                </PopoverContent>
+              </PopoverPortal>
+            </PopoverRoot>
+          </div>
+          <div v-if="strokes.items.value.length && hasStrokeSides && strokeSidesCustom" class="op-grid2 op-stroke-sides">
+            <NumField label="T" title="Top stroke weight" :min="0" :value="strokeControls.borderWeight('top')" @commit="(v: number) => strokeControls.updateBorderWeight('top', v)" />
+            <NumField label="R" title="Right stroke weight" :min="0" :value="strokeControls.borderWeight('right')" @commit="(v: number) => strokeControls.updateBorderWeight('right', v)" />
+            <NumField label="B" title="Bottom stroke weight" :min="0" :value="strokeControls.borderWeight('bottom')" @commit="(v: number) => strokeControls.updateBorderWeight('bottom', v)" />
+            <NumField label="L" title="Left stroke weight" :min="0" :value="strokeControls.borderWeight('left')" @commit="(v: number) => strokeControls.updateBorderWeight('left', v)" />
           </div>
         </template>
       </section>

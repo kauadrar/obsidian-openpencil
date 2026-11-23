@@ -18,10 +18,11 @@ const props = withDefaults(
   defineProps<{
     fill: Fill
     index: number
+    paint?: 'fills' | 'strokes'
     nodeId?: string | null
     okhcl?: OkHCLControls | null
   }>(),
-  { nodeId: null, okhcl: null },
+  { paint: 'fills', nodeId: null, okhcl: null },
 )
 
 const emit = defineEmits<{
@@ -62,7 +63,7 @@ function syncGradientEdit(open: boolean) {
   if (open && isGradient.value && props.nodeId) {
     editor.state.gradientEdit = {
       nodeId: props.nodeId,
-      paint: 'fills',
+      paint: props.paint,
       index: props.index,
       stop: activeStop.value,
     }
