@@ -529,6 +529,44 @@ try {
       settingsRes.deltaAt1 > 0 &&
       settingsRes.deltaAt2 > settingsRes.deltaAt1 * 1.5,
       `Δ@1x=${settingsRes.deltaAt1?.toFixed(4)}, Δ@2x=${settingsRes.deltaAt2?.toFixed(4)}`)
+
+    // Spec 15: Export to vault stable naming (<design> - <layer/page>, sanitized chars, nested collision id).
+    const exportRes = await page.evaluate(async (ids) => {
+      const ed = window.smokeEditor
+      window.smokeExports = []
+      const frame = ed.graph.getNode(ids.frame)
+      const origName = frame.name
+      frame.name = 'Card/Hero:1'
+      ed.select([ids.frame])
+      await new Promise((r) => setTimeout(r, 50))
+      document.querySelector('button[title="Add export setting"]')?.click()
+      await new Promise((r) => setTimeout(r, 50))
+      document.querySelector('.op-export-btn')?.click()
+      for (let i = 0; i < 40 && window.smokeExports.length < 1; i++) {
+        await new Promise((r) => setTimeout(r, 50))
+      }
+      const firstExport = window.smokeExports[0]
+
+      // Nested frame with same name as top-level frame gets id suffix.
+      const nested = ed.graph.createNode('FRAME', ids.frame, { name: 'Card/Hero:1', x: 10, y: 10, width: 20, height: 20 })
+      ed.select([nested.id])
+      await new Promise((r) => setTimeout(r, 50))
+      document.querySelector('button[title="Add export setting"]')?.click()
+      await new Promise((r) => setTimeout(r, 50))
+      document.querySelector('.op-export-btn')?.click()
+      for (let i = 0; i < 40 && window.smokeExports.length < 2; i++) {
+        await new Promise((r) => setTimeout(r, 50))
+      }
+      const nestedExport = window.smokeExports[1]
+      frame.name = origName
+      return { firstExport, nestedExport, nestedId: nested.id }
+    }, s8)
+    check('Export uses stable <design> - <sanitized frame>.png name',
+      exportRes.firstExport?.name === 'Smoke - Card-Hero-1.png' && exportRes.firstExport?.bytes > 0,
+      JSON.stringify(exportRes.firstExport))
+    check('Nested frame with duplicate name gets layer id suffix',
+      exportRes.nestedExport?.name === `Smoke - Card-Hero-1-${exportRes.nestedId.replace(/[\\/:*?"<>|#^[\]]/g, '-')}.png`,
+      JSON.stringify(exportRes.nestedExport))
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))

@@ -42,6 +42,11 @@
         notify(msg) {
           window.smokeLastNotice = msg
         },
+        writeExport(name, bytes) {
+          window.smokeExports ??= []
+          window.smokeExports.push({ name, bytes: bytes.length })
+          return name
+        },
       })
       window.smokeEditor = mounted.editor // for poking at the editor by hand from the console
       window.smokeMounted = mounted
