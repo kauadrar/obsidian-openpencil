@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0 highlights
+
+* **Design panel** on the right of the editor: position and size with min/max and aspect lock, constraints, auto layout, fills, strokes, blend mode, corner radii, typography, effects, export.
+* **Context menus** on the canvas and layers, and **keyboard shortcuts**, including a zoom menu with presets.
+* **Obsidian commands** in the command palette, including **Place…** for images and SVGs from your vault.
+* **Drop to place** images, SVGs and `.fig` files on the canvas.
+* **Pages** can be renamed, deleted, reordered and divided.
+* **Export to vault** with stable filenames; re-exporting overwrites the file.
+* **Embeds** show `.fig` thumbnails in Reading view and Live Preview.
+* **New design** from a folder's right-click menu, and a **settings tab** for snapping and zoom speed.
+* Unchanged: `.pen` is still saved only through **Save as .fig** unless OpenPencil can write `.pen`. Keep backups of Figma files.
+
 ## [0.2.0](https://github.com/kauadrar/obsidian-openpencil/compare/0.1.0...0.2.0) (2026-11-23)
 
 
