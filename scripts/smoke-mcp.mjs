@@ -80,7 +80,6 @@ for (const [name, args] of [
   ['save_document', { document_id: '__smoke_mcp__.fig' }],
   ['close_document', { document_id: '__smoke_mcp__.fig' }],
   ['open_document', { path: '__smoke_mcp__.fig' }],
-  ['close_document', { document_id: '__smoke_mcp__.fig' }],
 ]) {
   try {
     const res = await rpc('tools/call', { name, arguments: args })
@@ -96,13 +95,12 @@ for (const [name, args] of [
   }
 }
 
-if (failures > 0) {
-  console.error(`\n${failures} step(s) failed`)
-  process.exit(1)
-}
-
-// Verify undo/redo actually mutates the page tree
+// Verify undo/redo actually mutates the page tree while __smoke_mcp__.fig is open
 try {
+  await rpc('tools/call', {
+    name: 'create_shape',
+    arguments: { type: 'RECTANGLE', x: 20, y: 20, width: 40, height: 40 },
+  })
   const beforeUndo = await rpc('tools/call', { name: 'get_page_tree', arguments: {} })
   const undoRes = await rpc('tools/call', { name: 'undo', arguments: {} })
   const afterUndo = await rpc('tools/call', { name: 'get_page_tree', arguments: {} })
@@ -114,7 +112,20 @@ try {
   assert.ok(!undoRes.result?.isError, 'undo returned error')
   console.log('PASS undo-reverts-edit')
 } catch (err) {
+  failures++
   console.error(`FAIL undo-reverts-edit: ${err instanceof Error ? err.message : String(err)}`)
+}
+
+try {
+  await rpc('tools/call', { name: 'close_document', arguments: { document_id: '__smoke_mcp__.fig' } })
+  console.log('PASS close_document (cleanup)')
+} catch (err) {
+  failures++
+  console.error(`FAIL close_document (cleanup): ${err instanceof Error ? err.message : String(err)}`)
+}
+
+if (failures > 0) {
+  console.error(`\n${failures} step(s) failed`)
   process.exit(1)
 }
 
