@@ -73,6 +73,8 @@ export interface MountedEditor {
   exportNative(documentName?: string): Promise<Uint8Array>
   /** The document as a .fig file. */
   exportFig(documentName?: string): Promise<Uint8Array>
+  canRunCommand(id: string): boolean
+  runCommand(id: string): void
   destroy(): void
 }
 
@@ -179,6 +181,8 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
     if (change !== 'clear') opts.onChange()
   })
 
+  const shellRef = ref<{ canRunCommand(id: string): boolean; runCommand(id: string): void } | null>(null)
+
   // provideEditor must sit in a parent of the components that call useEditor(), since Vue's
   // inject() does not see a component's own provides.
   const Root = defineComponent({
@@ -189,6 +193,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
       if (opts.notify) provide(NOTIFY, opts.notify)
       return () =>
         h(Shell, {
+          ref: shellRef,
           editor,
           active,
           readOnly: !canWrite,
@@ -221,6 +226,8 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
       return typeof result.data === 'string' ? new TextEncoder().encode(result.data) : new Uint8Array(result.data)
     },
     exportFig,
+    canRunCommand: (id) => shellRef.value?.canRunCommand(id) ?? false,
+    runCommand: (id) => shellRef.value?.runCommand(id),
     destroy() {
       offHistory()
       themeObserver.disconnect()

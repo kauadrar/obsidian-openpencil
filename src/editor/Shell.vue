@@ -8,14 +8,15 @@ import { CanvasRoot, CanvasSurface } from '@open-pencil/vue/canvas'
 import { ToolbarRoot } from '@open-pencil/vue/primitives/Toolbar'
 import { PageListRoot } from '@open-pencil/vue/primitives/PageList'
 import { LayerTreeRoot, LayerTreeItem } from '@open-pencil/vue/primitives/LayerTree'
-import { formatShortcut } from '@open-pencil/vue/editor/commands'
+import { formatShortcut, useEditorCommands, type EditorCommandId } from '@open-pencil/vue/editor/commands'
+import { useTypography } from '@open-pencil/vue/controls/typography'
 import { useInlineRename } from '@open-pencil/vue/editor/inline-rename'
 import { useEditorKeyboard } from '@open-pencil/vue/editor/keyboard'
 import { useMenuModel, type MenuEntry } from '@open-pencil/vue/editor/menu-model'
 import DesignPanel from './DesignPanel.vue'
 import ZoomMenu from './ZoomMenu.vue'
-import { copySelection, copySelectionAsPNG, copySelectionAsSVG, cutSelection, pasteSelection } from './clipboard'
-import { NOTIFY, SHOW_CONTEXT_MENU, toContextEntries, type ContextMenuEntry } from './context'
+import { copySelection, copySelectionAsPNG, copySelectionAsSVG, cutSelection, exportSelection, pasteProperties, pasteSelection } from './clipboard'
+import { NOTIFY, SHOW_CONTEXT_MENU, WRITE_EXPORT, toContextEntries, type ContextMenuEntry } from './context'
 import { deletePageWithUndo, movePageWithUndo, renamePageWithUndo } from './pages'
 import { createAppShortcuts } from './shortcuts'
 import {
@@ -45,7 +46,10 @@ const showRulers = computed(() => (props.editor.state as typeof props.editor.sta
 
 const showContextMenu = inject(SHOW_CONTEXT_MENU, null)
 const notify = inject(NOTIFY, null)
+const writeExport = inject(WRITE_EXPORT, null)
 const { canvasMenu } = useMenuModel()
+const { commands: editorCommands, runCommand: runSdkCommand } = useEditorCommands()
+const typography = useTypography()
 
 function buildContextMenu(event: MouseEvent, cursorPos?: { x: number; y: number }) {
   if (!showContextMenu) return
@@ -229,12 +233,87 @@ function onFailed(e: unknown) {
   console.error('[openpencil] canvas failed', e)
 }
 
-const editingLayer = ref<string | null>(null)
-function finishRename(rename: (name: string) => void, e: Event) {
-  const value = (e.target as HTMLInputElement).value.trim()
-  if (value) rename(value)
-  editingLayer.value = null
+const layerRename = useInlineRename((nodeId, name) => {
+  props.editor.updateNodeWithUndo(nodeId, { name }, 'Rename layer')
+})
+
+function canRunCommand(id: string): boolean {
+  if (id in editorCommands) return editorCommands[id as EditorCommandId].enabled.value
+  const hasSelection = props.editor.state.selectedIds.size > 0
+  switch (id) {
+    case 'app.renameSelection':
+      return props.editor.state.selectedIds.size === 1
+    case 'app.copyProperties':
+    case 'app.pasteProperties':
+    case 'app.copyAsSVG':
+    case 'app.copyAsPNG':
+    case 'app.exportSelection':
+      return hasSelection
+    case 'app.bold':
+    case 'app.italic':
+    case 'app.underline':
+      return typography.nodes.value.length > 0
+    case 'app.toggleRulers':
+    case 'app.togglePixelGrid':
+    case 'app.toggleSnapPixelGrid':
+      return true
+    default:
+      return false
+  }
 }
+
+function runCommand(id: string): void {
+  if (id in editorCommands) {
+    runSdkCommand(id as EditorCommandId)
+    return
+  }
+  switch (id) {
+    case 'app.renameSelection': {
+      const node = props.editor.getSelectedNode()
+      if (node) layerRename.start(node.id, node.name)
+      break
+    }
+    case 'app.copyProperties':
+      void copySelection(props.editor, true)
+      break
+    case 'app.pasteProperties':
+      void pasteProperties(props.editor)
+      break
+    case 'app.bold':
+      typography.toggleBold()
+      break
+    case 'app.italic':
+      typography.toggleItalic()
+      break
+    case 'app.underline':
+      typography.toggleDecoration('UNDERLINE')
+      break
+    case 'app.toggleRulers': {
+      const state = props.editor.state as typeof props.editor.state & { showRulers?: boolean }
+      state.showRulers = state.showRulers === false
+      props.editor.requestRepaint()
+      break
+    }
+    case 'app.togglePixelGrid':
+      props.editor.state.showPixelGrid = props.editor.state.showPixelGrid === false
+      props.editor.requestRepaint()
+      break
+    case 'app.toggleSnapPixelGrid':
+      props.editor.state.snappingPreferences.pixelGrid = !props.editor.state.snappingPreferences.pixelGrid
+      break
+    case 'app.copyAsSVG':
+      void copySelectionAsSVG(props.editor, notify ?? undefined)
+      break
+    case 'app.copyAsPNG':
+      void copySelectionAsPNG(props.editor, notify ?? undefined)
+      break
+    case 'app.exportSelection':
+      void exportSelection(props.editor, writeExport, notify)
+      break
+  }
+}
+
+defineExpose({ canRunCommand, runCommand })
 </script>
 
 <template>
@@ -327,7 +406,7 @@ function finishRename(rename: (name: string) => void, e: Event) {
                 }"
                 :style="{ paddingLeft: `calc(${padLeft} + 4px)` }"
                 @click="actions.select($event.shiftKey || $event.metaKey)"
-                @dblclick="editingLayer = node.id"
+                @dblclick="layerRename.start(node.id, node.name)"
                 @contextmenu.prevent.stop="onLayerContextMenu(row.node.id, $event)"
               >
                 <button
@@ -340,14 +419,13 @@ function finishRename(rename: (name: string) => void, e: Event) {
                 </button>
                 <Icon class="op-layer-icon" :svg="LAYER_ICONS[node.type] ?? LAYER_ICONS.RECTANGLE" :size="14" />
                 <input
-                  v-if="editingLayer === node.id"
+                  v-if="layerRename.editingId.value === node.id"
+                  :ref="(el) => el && layerRename.focusInput(el as HTMLInputElement)"
                   class="op-rename"
                   :value="node.name"
-                  autofocus
                   @click.stop
-                  @keydown.enter="finishRename(actions.rename, $event)"
-                  @keydown.esc="editingLayer = null"
-                  @blur="finishRename(actions.rename, $event)"
+                  @keydown.stop="layerRename.onKeydown"
+                  @blur="layerRename.commit(node.id, $event)"
                 />
                 <span v-else class="op-row-label">{{ node.name }}</span>
                 <span class="op-layer-tools">

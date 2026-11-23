@@ -11,6 +11,7 @@ import {
   type WorkspaceLeaf,
 } from 'obsidian'
 import type * as EditorModule from './editor/index'
+import { PLUGIN_COMMANDS } from './commands'
 import { ensureEditorUnpacked } from './unpack'
 
 export const VIEW_TYPE = 'openpencil-design'
@@ -40,6 +41,18 @@ export default class OpenPencilPlugin extends Plugin {
         return true
       },
     })
+    for (const cmd of PLUGIN_COMMANDS) {
+      this.addCommand({
+        id: cmd.id,
+        name: cmd.name,
+        checkCallback: (checking) => {
+          const view = this.app.workspace.getActiveViewOfType(DesignView)
+          if (!view?.isFigActive() || !view.canRunCommand(cmd.id)) return false
+          if (!checking) view.runCommand(cmd.id)
+          return true
+        },
+      })
+    }
   }
 
   /** Loads the editor bundle once. A dynamic import of the plugin folder's own URL keeps
@@ -100,6 +113,15 @@ class DesignView extends FileView {
   }
   getIcon() {
     return 'pen-tool'
+  }
+  isFigActive(): boolean {
+    return this.file?.extension === 'fig' && this.mounted !== null
+  }
+  canRunCommand(id: string): boolean {
+    return this.mounted?.canRunCommand(id) ?? false
+  }
+  runCommand(id: string): void {
+    this.mounted?.runCommand(id)
   }
   canAcceptExtension(extension: string) {
     return (EXTENSIONS as readonly string[]).includes(extension)
