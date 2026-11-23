@@ -57,7 +57,16 @@ test('the editor loads from blob URLs in an opaque-origin frame, renders a .fig 
             out.workersRefused = (() => { try { new Worker('op-blob:/chunks/x.js'); return false } catch (err) { return true } })()
             const mod = await import(loaded.entryUrl)
             const data = await mod.createBlankFig('Test')
-            const m = await mod.mountEditor(document.getElementById('host'), { data, fileName: 'test.fig', extension: 'fig', onChange() {}, onSaveRequest() {} })
+            // The plugin mounts on Android with previewOnly (mobile): the long-press menu must offer no edit action.
+            const menus = []
+            const m = await mod.mountEditor(document.getElementById('host'), { data, fileName: 'test.fig', extension: 'fig', onChange() {}, onSaveRequest() {}, previewOnly: true, showContextMenu: (entries) => menus.push(entries.map((x) => x.label).filter(Boolean)) })
+            const rectNode = m.editor.graph.createNode('RECTANGLE', m.editor.state.currentPageId, { name: 'R', x: 10, y: 10, width: 60, height: 60 })
+            m.editor.select([rectNode.id])
+            const surface = document.querySelector('.op-surface') || document.querySelector('canvas')
+            const box = surface.getBoundingClientRect()
+            surface.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: box.left + 40, clientY: box.top + 40 }))
+            await new Promise((r) => setTimeout(r, 300))
+            out.menus = menus
             await new Promise((r) => setTimeout(r, 2000))
             out.origin = String(location.origin)
             out.layers = [...m.editor.graph.getAllNodes()].length
@@ -73,6 +82,8 @@ test('the editor loads from blob URLs in an opaque-origin frame, renders a .fig 
     }), { files, loader })
     assert.equal(result.origin, 'null')
     assert.equal(result.workersRefused, true)
+    // Spec 25: on mobile, the long-press menu offers no Copy, Cut, Paste, Duplicate, Delete or ordering item.
+    assert.deepEqual(result.menus, [], 'no context menu on mobile')
     assert.equal(result.ok, true, result.error)
     assert.ok(result.layers > 0)
     assert.ok(result.saved > 0)
