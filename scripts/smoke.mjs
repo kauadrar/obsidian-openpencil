@@ -714,17 +714,16 @@ try {
     // Spec 19: Stroke settings popover (dash/gap, cap, join, miter limit) & per-side weights.
     await page.evaluate((id) => window.smokeEditor.select([id]), s8.frame)
     await page.locator('button[title="Add stroke"]').click()
-    await page.locator('button[title="Stroke settings"]').click()
-    await page.locator('.op-stroke-popover').waitFor({ state: 'visible' })
-    await page.locator('.op-stroke-switch input[type="checkbox"]').check()
-    await page.locator('.op-stroke-popover select[aria-label="Stroke cap"]').selectOption('ROUND')
-    await page.locator('.op-stroke-popover select[aria-label="Stroke join"]').selectOption('BEVEL')
-    await page.keyboard.press('Escape')
     await page.locator('button[title="Individual sides"]').click()
     const topInput = page.locator('.op-stroke-sides input').first()
     await topInput.click()
     await topInput.fill('4')
     await topInput.press('Enter')
+    await page.locator('button[title="Stroke settings"]').click()
+    await page.locator('.op-stroke-popover').waitFor({ state: 'visible' })
+    await page.locator('.op-stroke-switch input[type="checkbox"]').check()
+    await page.locator('.op-stroke-popover select[aria-label="Stroke cap"]').selectOption('ROUND')
+    await page.locator('.op-stroke-popover select[aria-label="Stroke join"]').selectOption('BEVEL')
     const strokeRes = await page.evaluate(() => {
       const n = window.smokeEditor.getSelectedNode()
       return {
@@ -734,10 +733,17 @@ try {
         top: n?.borderTopWeight,
       }
     })
-    check('Stroke settings popover sets dash (6/6), cap, join, and per-side top weight',
+    const dashInput = page.locator('.op-stroke-popover .op-grid2 input').first()
+    await dashInput.click()
+    await dashInput.fill('0')
+    await dashInput.press('Enter')
+    const dashAfterZero = await page.evaluate(() => window.smokeEditor.getSelectedNode()?.dashPattern ?? [])
+    await page.keyboard.press('Escape')
+    check('Stroke settings popover sets dash (6/6), dash 0 -> solid, cap, join, and per-side top weight',
       Array.isArray(strokeRes.dash) && strokeRes.dash[0] === 6 && strokeRes.dash[1] === 6 &&
+      Array.isArray(dashAfterZero) && dashAfterZero.length === 0 &&
       strokeRes.cap === 'ROUND' && strokeRes.join === 'BEVEL' && strokeRes.top === 4,
-      JSON.stringify(strokeRes))
+      JSON.stringify({ ...strokeRes, dashAfterZero }))
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
