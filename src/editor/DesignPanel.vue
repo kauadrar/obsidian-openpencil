@@ -117,7 +117,6 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
   <aside class="op-design">
     <div class="op-design-tabs">
       <span class="op-design-tab is-active">Design</span>
-      <span class="op-design-zoom">{{ Math.round(editor.state.zoom * 100) }}%</span>
     </div>
 
     <!-- Nothing selected: the page -->

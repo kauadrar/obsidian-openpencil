@@ -239,6 +239,7 @@
 
 /* Canvas */
 .op-shell .op-canvas {
+  container-type: inline-size;
   position: relative;
   overflow: hidden;
   min-width: 0;
@@ -403,9 +404,26 @@
 .op-shell .op-design-tab.is-active {
   border-bottom-color: var(--op-accent);
 }
-.op-shell .op-design-zoom {
+.op-shell .op-zoom {
+  position: absolute;
+  left: 12px;
+  bottom: 40px;
+  box-sizing: content-box;
+  width: 6ch;
+  padding: 4px 8px;
+  border-radius: 8px;
+  text-align: center;
+  white-space: nowrap;
   color: var(--op-text-muted);
   font-variant-numeric: tabular-nums;
+  background: var(--op-bg-raised);
+  box-shadow: var(--op-shadow);
+}
+/* In a narrow canvas the toolbar spans the width and wraps: lift the label above it. */
+@container (max-width: 460px) {
+  .op-shell .op-zoom {
+    bottom: 170px;
+  }
 }
 .op-shell .op-prop {
   display: flex;

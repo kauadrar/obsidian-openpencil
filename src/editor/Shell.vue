@@ -260,6 +260,9 @@ function finishRename(rename: (name: string) => void, e: Event) {
         </div>
       </ToolbarRoot>
 
+      <!-- Bottom-left: the top-right of a view is where other Obsidian plugins draw status overlays. -->
+      <span class="op-zoom" title="Zoom">{{ Math.round(editor.state.zoom * 100) }}%</span>
+
       <div v-if="readOnly" class="op-banner">
         OpenPencil can't write this file format. Run “Save as .fig” to keep your edits.
       </div>
