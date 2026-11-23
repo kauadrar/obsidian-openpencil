@@ -24,3 +24,11 @@ test('"Show behind transparent areas" defaults to on, and is off only when set t
   assert.equal(showsBehindTransparent({ showShadowBehindNode: true }), true)
   assert.equal(showsBehindTransparent({ showShadowBehindNode: false }), false)
 })
+
+import { displayEffectType } from '../src/editor/effects.ts'
+
+test('a reopened layer blur (stored as FOREGROUND_BLUR) shows as Layer blur', () => {
+  assert.equal(displayEffectType('FOREGROUND_BLUR'), 'LAYER_BLUR')
+  assert.equal(displayEffectType('LAYER_BLUR'), 'LAYER_BLUR')
+  assert.equal(displayEffectType('DROP_SHADOW'), 'DROP_SHADOW')
+})

@@ -11,7 +11,7 @@ import { useNodeProps } from '@open-pencil/vue/controls/node-props'
 import { ColorField, NumField } from './fields'
 import { EYE_ICON, EYE_OFF_ICON } from './icons'
 import BindableValueRow from './BindableValueRow.vue'
-import { SHADOW_BLEND_MODES, showsBehindTransparent, supportedEffectOptions } from './effects'
+import { displayEffectType, SHADOW_BLEND_MODES, showsBehindTransparent, supportedEffectOptions } from './effects'
 
 const effects = useEditorPropertyList('effects')
 const fx = useEffectsControls()
@@ -55,7 +55,7 @@ const setAlpha = (i: number, e: Effect, a: number) => fx.updateColor(effects.act
             </svg>
           </button>
           <label class="op-field op-effect-type">
-            <select :value="effect.type" @change="(e: Event) => setType(i, (e.target as HTMLSelectElement).value as Effect['type'])">
+            <select :value="displayEffectType(effect.type)" @change="(e: Event) => setType(i, (e.target as HTMLSelectElement).value as Effect['type'])">
               <option v-for="o in supportedEffectOptions(fx.effectOptionsFor(effects.items.value, i))" :key="o.value" :value="o.value">{{ o.label }}</option>
             </select>
           </label>

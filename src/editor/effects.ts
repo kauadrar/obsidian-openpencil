@@ -42,3 +42,11 @@ export const SHADOW_BLEND_MODES: readonly { value: string; label: string }[] = [
 export function showsBehindTransparent(effect: { showShadowBehindNode?: boolean }): boolean {
   return effect.showShadowBehindNode !== false
 }
+
+/**
+ * The type a row's select shows. A layer blur is stored as FOREGROUND_BLUR in a .fig file (Figma's
+ * name for it), so a reopened layer blur would otherwise match no option and show blank.
+ */
+export function displayEffectType(type: string): string {
+  return type === 'FOREGROUND_BLUR' ? 'LAYER_BLUR' : type
+}
