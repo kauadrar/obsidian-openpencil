@@ -11,7 +11,16 @@ design editor, inside an Obsidian tab, the way the Excalidraw plugin handles `.e
 - Click a `.fig` or `.pen` file in your vault and it opens in an OpenPencil tab, with a canvas, page list and toolbar.
 - `.fig` edits **autosave** 1.5 s after you stop editing. They also save on **Mod+S**, when you close the tab and when you switch files.
 - `.pen` files open and can be edited, but the plugin only does what OpenPencil does, and OpenPencil can't write `.pen` (as of 0.17.0): run **Save as .fig** to keep changes. If OpenPencil gains `.pen` writing, the plugin saves `.pen` too.
-- **New design** (command or ribbon icon) creates `Untitled design.fig` and opens it.
+- **New design** (command or ribbon icon, or **New design** in a folder's right-click menu in the file explorer) creates `Untitled design.fig` and opens it.
+- **Design panel** on the right of the editor: edit layer name and type, position and size (with min/max and aspect lock), constraints (pin diagram), auto layout, fills (solid, gradient, image), strokes (per-side weights), blend mode, corner radii, typography (searchable font picker, B/I/U/S, text case), effects, flips, clip content, booleans, arrange, and export.
+- **Context menus** on the canvas and on layers: copy, cut, paste, hide/show, lock/unlock, copy as SVG or PNG, and more.
+- **Keyboard shortcuts** for common canvas actions, and a **zoom menu** with presets, a percentage input and view toggles.
+- **Obsidian commands** in the command palette, including **Place…**, which puts an image or SVG from your vault onto the canvas.
+- **Drop to place:** drag an image, SVG or `.fig` file onto the canvas to place it.
+- **Pages:** rename, delete, reorder and add dividers.
+- **Export to vault:** write designs out as stable filenames in your vault; re-exporting overwrites the same file.
+- **Embed in notes:** `.fig` files show thumbnails in Reading view and Live Preview.
+- **Settings tab:** snapping and zoom speed.
 - If a file changes on disk (sync, another app) while you have no unsaved edits, the tab reloads it.
 - Desktop only.
 
