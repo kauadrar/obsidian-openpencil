@@ -2,7 +2,7 @@
 // The editor shell, laid out like OpenPencil's own window: a sidebar with pages and layers,
 // the canvas with rulers, and a floating icon toolbar. Built from @open-pencil/vue's unstyled
 // primitives; the look lives in styles.css under .op-shell.
-import { defineComponent, h, ref, type Ref } from 'vue'
+import { computed, defineComponent, h, ref, type Ref } from 'vue'
 import { EDITOR_TOOLS, type Editor, type Tool } from '@open-pencil/core'
 import { CanvasRoot, CanvasSurface } from '@open-pencil/vue/canvas'
 import { ToolbarRoot } from '@open-pencil/vue/primitives/Toolbar'
@@ -10,6 +10,7 @@ import { PageListRoot } from '@open-pencil/vue/primitives/PageList'
 import { LayerTreeRoot, LayerTreeItem } from '@open-pencil/vue/primitives/LayerTree'
 import { useEditorKeyboard } from '@open-pencil/vue/editor/keyboard'
 import DesignPanel from './DesignPanel.vue'
+import { createAppShortcuts } from './shortcuts'
 import {
   CHEVRON_DOWN_ICON,
   CHEVRON_ICON,
@@ -31,8 +32,9 @@ const emit = defineEmits<{ save: [] }>()
 
 useEditorKeyboard({
   active: () => props.active.value,
-  shortcuts: [{ id: 'save', keys: 'Mod+S', run: () => emit('save') }],
+  shortcuts: createAppShortcuts(props.editor, () => emit('save')),
 })
+const showRulers = computed(() => (props.editor.state as typeof props.editor.state & { showRulers?: boolean }).showRulers !== false)
 
 /** An inline 16×16 stroke icon. */
 const Icon = defineComponent({
@@ -210,7 +212,7 @@ function finishRename(rename: (name: string) => void, e: Event) {
     </aside>
 
     <main class="op-canvas">
-      <CanvasRoot :show-rulers="true" @ready="onReady" @failed="onFailed">
+      <CanvasRoot :key="showRulers ? 'rulers' : 'no-rulers'" :show-rulers="showRulers" @ready="onReady" @failed="onFailed">
         <CanvasSurface class="op-surface" />
       </CanvasRoot>
 
