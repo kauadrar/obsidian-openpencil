@@ -405,6 +405,37 @@ try {
     const issuesOff = await page.evaluate(() => window.smokeEditor.state.designIssues === null)
     check('Design issues toggle sets and clears designIssues', issuesOn && issuesOff)
     await page.keyboard.press('Escape')
+
+    // Spec 10: Copy as SVG / Copy as PNG submenu.
+    await page.click('.op-surface', { button: 'right', position: { x: 5, y: 5 } })
+    const copyAsEmpty = await page.evaluate(() => {
+      const sub = (window.smokeLastMenu?.entries ?? []).find((e) => e.label === 'Copy as')?.sub ?? []
+      return sub.map((s) => ({ label: s.label, disabled: s.disabled }))
+    })
+    check('Copy as SVG and PNG disabled when nothing is selected',
+      copyAsEmpty.length === 2 && copyAsEmpty.every((s) => s.disabled === true))
+
+    await page.evaluate((ids) => window.smokeEditor.select([ids.other]), s8)
+    await page.locator('.op-layer', { hasText: 'Other' }).click({ button: 'right' })
+    const copyAsSel = await page.evaluate(async () => {
+      const writes = []
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async (text) => writes.push({ kind: 'text', text }),
+          write: async (items) => writes.push({ kind: 'items', types: items.flatMap((i) => i.types) }),
+        },
+      })
+      const sub = (window.smokeLastMenu?.entries ?? []).find((e) => e.label === 'Copy as')?.sub ?? []
+      await sub.find((s) => s.label === 'Copy as SVG')?.action?.()
+      await new Promise((r) => setTimeout(r, 50))
+      await sub.find((s) => s.label === 'Copy as PNG')?.action?.()
+      await new Promise((r) => setTimeout(r, 150))
+      return writes
+    })
+    check('Copy as SVG writes SVG markup and Copy as PNG writes image/png',
+      copyAsSel.some((w) => w.kind === 'text' && w.text.includes('<svg')) &&
+      copyAsSel.some((w) => w.kind === 'items' && w.types.includes('image/png')))
   }
 
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
