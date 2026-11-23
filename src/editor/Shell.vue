@@ -55,8 +55,8 @@ const Icon = defineComponent({
   },
 })
 
-// A design file's toolbar, as in OpenPencil: FigJam's board tools are left out.
-const BOARD_ONLY = new Set<Tool>(['STICKY', 'SHAPE_WITH_TEXT', 'CONNECTOR'])
+// A design file's toolbar, as in OpenPencil: FigJam's board tools are left out, and so is Comment (out of scope).
+const BOARD_ONLY = new Set<Tool>(['STICKY', 'SHAPE_WITH_TEXT', 'CONNECTOR', 'COMMENT'])
 const designTools = EDITOR_TOOLS.filter((t) => !BOARD_ONLY.has(t.key))
 
 const TOOL_NAMES: Partial<Record<Tool, [string, string]>> = {
