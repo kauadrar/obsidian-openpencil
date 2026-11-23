@@ -22,7 +22,7 @@ import { createDesignEmbedExtension, DesignEmbedManager, processDesignEmbeds } f
 import { DEFAULT_SETTINGS, sanitizeSettings, type OpenPencilSettings } from './settings'
 import { ensureEditorUnpacked } from './unpack'
 import { createMcpRpcSender, type McpDocumentSummary, type McpHost } from './mcp/adapter'
-import { generateMcpToken, McpServerController, type McpServerStatus } from './mcp/server'
+import type { McpServerController, McpServerStatus } from './mcp/server'
 
 export const VIEW_TYPE = 'openpencil-design'
 const EXTENSIONS = ['fig', 'pen'] as const
@@ -97,6 +97,7 @@ export default class OpenPencilPlugin extends Plugin {
     }
 
     if (Platform.isDesktopApp) {
+      const { generateMcpToken, McpServerController } = await import('./mcp/server')
       if (!this.settings.mcpToken) {
         this.settings = sanitizeSettings({ ...this.settings, mcpToken: generateMcpToken() })
         await this.saveData(this.settings)
@@ -156,6 +157,8 @@ export default class OpenPencilPlugin extends Plugin {
   }
 
   async regenerateMcpToken(): Promise<string> {
+    if (!Platform.isDesktopApp) return this.settings.mcpToken
+    const { generateMcpToken } = await import('./mcp/server')
     const token = generateMcpToken()
     this.settings = sanitizeSettings({ ...this.settings, mcpToken: token })
     await this.saveData(this.settings)

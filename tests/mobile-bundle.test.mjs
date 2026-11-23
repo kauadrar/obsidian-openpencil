@@ -1,0 +1,80 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import path from 'node:path'
+import vm from 'node:vm'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const mainJsPath = path.resolve(__dirname, '../dist/main.js')
+
+test('dist/main.js loads and runs onload() on mobile without requiring node:* modules', async () => {
+  const requiredNodeModules = []
+
+  class FakePlugin {
+    app = {
+      vault: {
+        on: () => ({}),
+        offref: () => {},
+        getAbstractFileByPath: () => null,
+        adapter: {},
+      },
+      workspace: {
+        on: () => ({}),
+        onLayoutReady: () => {},
+        getLeavesOfType: () => [],
+      },
+    }
+    manifest = { id: 'openpencil-editor', dir: '.obsidian/plugins/openpencil-editor' }
+    async loadData() {
+      return {}
+    }
+    async saveData() {}
+    addSettingTab() {}
+    addRibbonIcon() {}
+    registerView() {}
+    registerExtensions() {}
+    registerMarkdownPostProcessor() {}
+    registerEditorExtension() {}
+    addCommand() {}
+    registerEvent() {}
+  }
+
+  const fakeObsidian = {
+    App: class {},
+    FileView: class {},
+    FuzzySuggestModal: class {},
+    Menu: class {},
+    MenuItem: class {},
+    Notice: class {},
+    Platform: { isDesktopApp: false, isMobile: true },
+    Plugin: FakePlugin,
+    PluginSettingTab: class {},
+    Setting: class {},
+    TFile: class {},
+    TFolder: class {},
+    normalizePath: (p) => p,
+  }
+
+  const customRequire = (request) => {
+    if (request === 'obsidian') return fakeObsidian
+    if (request === '@codemirror/view') return { EditorView: {}, ViewPlugin: { fromClass: () => ({}) } }
+    if (request.startsWith('node:')) {
+      requiredNodeModules.push(request)
+      throw new Error(`Mobile environment cannot load ${request}`)
+    }
+    throw new Error(`Unexpected external require: ${request}`)
+  }
+
+  const code = fs.readFileSync(mainJsPath, 'utf8')
+  const mod = { exports: {} }
+  const fn = vm.runInThisContext(`(function(exports, require, module, __filename, __dirname) {\n${code}\n})`, {
+    filename: mainJsPath,
+  })
+  fn(mod.exports, customRequire, mod, mainJsPath, path.dirname(mainJsPath))
+
+  const PluginClass = mod.exports.default ?? mod.exports
+  const plugin = new PluginClass()
+  await plugin.onload()
+  assert.deepEqual(requiredNodeModules, [])
+})
