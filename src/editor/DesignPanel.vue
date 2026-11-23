@@ -11,6 +11,7 @@ import { setPageBackgrounds } from '@open-pencil/core/figma-api'
 import { useEditor } from '@open-pencil/vue'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import { PositionControlsRoot } from '@open-pencil/vue/primitives/PositionControls'
+import { useFontPicker } from '@open-pencil/vue/primitives/FontPicker'
 import { TypographyControlsRoot } from '@open-pencil/vue/primitives/TypographyControls'
 import { useNodeProps } from '@open-pencil/vue/controls/node-props'
 import { useEditorPropertyList } from '@open-pencil/vue/controls/property-list'
@@ -42,6 +43,50 @@ const showContextMenu = inject(SHOW_CONTEXT_MENU, null)
 
 const hasSelection = computed(() => nodes.value.length > 0)
 const isText = computed(() => nodes.value.length > 0 && nodes.value.some((n) => n.type === 'TEXT'))
+
+const BUNDLED_FAMILIES: string[] = [
+  'Inter',
+  'Arial',
+  'Helvetica',
+  'Georgia',
+  'Times New Roman',
+  'Courier New',
+  'Verdana',
+  'Trebuchet MS',
+]
+
+let localFontState: 'unsupported' | 'prompt' | 'granted' | 'denied' =
+  typeof window !== 'undefined' && 'queryLocalFonts' in window ? 'prompt' : 'unsupported'
+
+const localFontAccess = {
+  state: () => localFontState,
+  load: async (): Promise<string[]> => {
+    if (typeof window === 'undefined' || !('queryLocalFonts' in window)) {
+      localFontState = 'unsupported'
+      return []
+    }
+    try {
+      const fonts = await (window as unknown as { queryLocalFonts: () => Promise<Array<{ family: string }>> }).queryLocalFonts()
+      localFontState = 'granted'
+      const seen = new Set<string>()
+      const result: string[] = []
+      for (const f of fonts) {
+        if (!seen.has(f.family)) {
+          seen.add(f.family)
+          result.push(f.family)
+        }
+      }
+      return result
+    } catch {
+      localFontState = 'denied'
+      return []
+    }
+  },
+}
+
+async function listFontFamilies(): Promise<string[]> {
+  return BUNDLED_FAMILIES
+}
 
 const TYPE_NAMES: Record<string, string> = {
   FRAME: 'Frame', GROUP: 'Group', SECTION: 'Section', COMPONENT: 'Component', COMPONENT_SET: 'Component set',
@@ -271,6 +316,19 @@ function fillLabel(f: Fill) {
 
 // ---- Typography
 const fontFamily = ref('')
+
+const {
+  searchTerm: fontSearch,
+  open: fontPickerOpen,
+  filtered: filteredFonts,
+  loading: fontsLoading,
+  accessState: fontAccessState,
+  requestAccess: requestFontAccess,
+  select: selectFontFamily,
+} = useFontPicker({
+  modelValue: fontFamily,
+  listFamilies: listFontFamilies,
+})
 watch(
   () => (isText.value ? merged('fontFamily') : ''),
   (v) => (fontFamily.value = typeof v === 'string' ? v : ''),
@@ -421,15 +479,58 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
       <TypographyControlsRoot v-if="isText" v-slot="type">
         <section class="op-prop">
           <div class="op-prop-head">Typography</div>
-          <label class="op-field op-field-wide">
-            <input
-              v-model="fontFamily"
-              spellcheck="false"
-              :placeholder="typeof merged('fontFamily') === 'symbol' ? 'Mixed' : 'Font family'"
-              @keydown.stop="(e: KeyboardEvent) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()"
-              @change="type.actions.setFamily(fontFamily.trim())"
-            />
-          </label>
+          <PopoverRoot v-model:open="fontPickerOpen">
+            <PopoverTrigger as-child>
+              <button
+                type="button"
+                class="op-field op-field-wide op-font-picker-trigger"
+                :class="{ 'is-open': fontPickerOpen, 'is-missing': type.hasMissingFonts.value }"
+                :title="type.hasMissingFonts.value ? `Missing font: ${type.missingFonts.value.join(', ')}` : 'Font family'"
+              >
+                <span class="op-font-picker-value" :style="typeof merged('fontFamily') === 'string' ? { fontFamily } : undefined">
+                  {{ typeof merged('fontFamily') === 'symbol' ? 'Mixed' : (fontFamily || 'Font family') }}
+                </span>
+                <span class="op-font-picker-caret">▾</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverPortal>
+              <PopoverContent class="op-font-picker-content" side="left" :side-offset="8" align="start">
+                <input
+                  v-model="fontSearch"
+                  class="op-font-picker-search"
+                  placeholder="Search fonts…"
+                  spellcheck="false"
+                  @keydown.stop
+                />
+                <div class="op-font-picker-viewport">
+                  <div
+                    v-for="f in filteredFonts"
+                    :key="f.family"
+                    class="op-font-picker-row"
+                    :class="{ 'is-selected': f.family === fontFamily }"
+                    @click="() => { selectFontFamily(f.family); type.actions.setFamily(f.family) }"
+                  >
+                    <div class="op-font-picker-item">
+                      <span class="op-font-picker-name" :style="{ fontFamily: f.family }">{{ f.family }}</span>
+                      <span class="op-font-picker-badge">{{ f.source }}</span>
+                    </div>
+                  </div>
+                  <div v-if="filteredFonts.length === 0" class="op-font-picker-empty">
+                    No matching fonts
+                  </div>
+                </div>
+                <button
+                  v-if="fontAccessState === 'prompt'"
+                  type="button"
+                  class="op-btn op-btn-sm"
+                  :disabled="fontsLoading"
+                  @click="requestFontAccess"
+                >
+                  {{ fontsLoading ? 'Loading…' : 'Load system fonts' }}
+                </button>
+              </PopoverContent>
+            </PopoverPortal>
+          </PopoverRoot>
           <div class="op-grid2">
             <label class="op-field">
               <select
@@ -463,6 +564,65 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
               <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round">
                 <path :d="a === 'LEFT' ? 'M2 4h12M2 8h8M2 12h10' : a === 'CENTER' ? 'M2 4h12M4 8h8M3 12h10' : a === 'RIGHT' ? 'M2 4h12M6 8h8M4 12h10' : 'M2 4h12M2 8h12M2 12h12'" />
               </svg>
+            </button>
+          </div>
+          <div class="op-segmented">
+            <button
+              v-for="va in (['TOP', 'CENTER', 'BOTTOM'] as const)"
+              :key="va"
+              :class="{ 'is-active': type.merged('textAlignVertical') === va }"
+              :title="`Vertical align ${va === 'CENTER' ? 'middle' : va.toLowerCase()}`"
+              @click="type.actions.setVerticalAlign(va)"
+            >
+              <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round">
+                <path :d="va === 'TOP' ? 'M3 3h10M8 5v8M5.5 7.5L8 5l2.5 2.5' : va === 'CENTER' ? 'M3 8h10M8 2v4M8 10v4' : 'M3 13h10M8 3v8M5.5 8.5L8 11l2.5-2.5'" />
+              </svg>
+            </button>
+          </div>
+          <div class="op-segmented">
+            <button
+              :class="{ 'is-active': type.activeFormatting.value.includes('BOLD') }"
+              title="Bold"
+              @click="type.actions.toggleBold()"
+            >
+              <strong>B</strong>
+            </button>
+            <button
+              :class="{ 'is-active': type.activeFormatting.value.includes('ITALIC') }"
+              title="Italic"
+              @click="type.actions.toggleItalic()"
+            >
+              <em>I</em>
+            </button>
+            <button
+              :class="{ 'is-active': type.activeFormatting.value.includes('UNDERLINE') }"
+              title="Underline"
+              @click="type.actions.toggleDecoration('UNDERLINE')"
+            >
+              <u>U</u>
+            </button>
+            <button
+              :class="{ 'is-active': type.activeFormatting.value.includes('STRIKETHROUGH') }"
+              title="Strikethrough"
+              @click="type.actions.toggleDecoration('STRIKETHROUGH')"
+            >
+              <s>S</s>
+            </button>
+          </div>
+          <div class="op-segmented">
+            <button
+              v-for="tc in ([
+                { value: 'ORIGINAL', label: 'Ag', title: 'Original case' },
+                { value: 'UPPER', label: 'AG', title: 'Uppercase' },
+                { value: 'LOWER', label: 'ag', title: 'Lowercase' },
+                { value: 'TITLE', label: 'Ab', title: 'Title case' },
+              ] as const)"
+              :key="tc.value"
+              :class="{ 'is-active': type.merged('textCase') === tc.value }"
+              :title="tc.title"
+              @click="type.actions.setTextCase(tc.value)"
+            >
+              {{ tc.label }}
             </button>
           </div>
           <div v-if="type.hasMissingFonts.value" class="op-prop-note is-warning">Missing font: {{ type.missingFonts.value.join(', ') }}</div>

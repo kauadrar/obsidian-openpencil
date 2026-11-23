@@ -798,6 +798,54 @@ try {
       JSON.stringify(spec21Res))
   }
 
+  // Spec 22: Font picker, vertical align, B/I/U/S, text case
+  {
+    const textId = await page.evaluate(() => {
+      const ed = window.smokeEditor
+      const n = ed.graph.createNode('TEXT', ed.state.currentPageId, {
+        name: 'Spec22Text',
+        x: 50,
+        y: 50,
+        width: 160,
+        height: 40,
+        text: 'Hello',
+        fontFamily: 'Inter',
+        fontSize: 16,
+      })
+      ed.select([n.id])
+      return n.id
+    })
+    await page.waitForTimeout(100)
+    await page.locator('.op-font-picker-trigger').click()
+    await page.waitForTimeout(150)
+    await page.locator('.op-font-picker-search').fill('Georgia')
+    await page.waitForTimeout(100)
+    await page.locator('.op-font-picker-item', { hasText: 'Georgia' }).first().click()
+    await page.waitForTimeout(100)
+    await page.locator('button[title="Vertical align middle"]').click()
+    await page.locator('button[title="Bold"]').click()
+    await page.locator('button[title="Underline"]').click()
+    await page.locator('button[title="Uppercase"]').click()
+    await page.waitForTimeout(100)
+    const spec22Res = await page.evaluate(() => {
+      const n = window.smokeEditor.getSelectedNode()
+      return {
+        fontFamily: n?.fontFamily,
+        textAlignVertical: n?.textAlignVertical,
+        fontWeight: n?.fontWeight,
+        textDecoration: n?.textDecoration,
+        textCase: n?.textCase,
+      }
+    })
+    check('Typography: FontPicker, vertical align, B/U, and text case work',
+      spec22Res.fontFamily === 'Georgia' &&
+      spec22Res.textAlignVertical === 'CENTER' &&
+      spec22Res.fontWeight >= 600 &&
+      spec22Res.textDecoration === 'UNDERLINE' &&
+      spec22Res.textCase === 'UPPER',
+      JSON.stringify(spec22Res))
+  }
+
   const pen = await page.evaluate(() => window.smoke.openPen('fixtures/pencil_button.pen'))
   check('.pen opens and the canvas starts', pen.ok, pen.error)
   check('.pen has layers', pen.nodes > 1, `${pen.nodes} nodes, pages: ${pen.pages?.join(', ')}`)
