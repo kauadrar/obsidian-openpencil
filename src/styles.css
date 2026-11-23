@@ -752,6 +752,31 @@
 .op-shell .op-prop-note.is-warning {
   color: var(--text-error, #f24822);
 }
+.op-shell .op-title-action {
+  margin-left: auto;
+}
+.op-shell .op-transform-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.op-shell .op-ignore-layout {
+  width: auto;
+  padding: 0 6px;
+  margin-left: auto;
+  font-size: 11px;
+}
+.op-shell .op-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--op-text);
+  cursor: pointer;
+}
+.op-shell .op-checkbox input {
+  margin: 0;
+}
 
 /* Native Obsidian Menu shortcut alignment */
 .menu-item-title:has(> .op-menu-kbd) {

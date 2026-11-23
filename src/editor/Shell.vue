@@ -14,7 +14,7 @@ import { useEditorKeyboard } from '@open-pencil/vue/editor/keyboard'
 import { useMenuModel, type MenuEntry } from '@open-pencil/vue/editor/menu-model'
 import DesignPanel from './DesignPanel.vue'
 import { copySelection, cutSelection, pasteSelection } from './clipboard'
-import { SHOW_CONTEXT_MENU, type ContextMenuEntry } from './context'
+import { SHOW_CONTEXT_MENU, toContextEntries, type ContextMenuEntry } from './context'
 import { deletePageWithUndo, movePageWithUndo, renamePageWithUndo } from './pages'
 import { createAppShortcuts } from './shortcuts'
 import {
@@ -45,28 +45,6 @@ const showRulers = computed(() => (props.editor.state as typeof props.editor.sta
 const showContextMenu = inject(SHOW_CONTEXT_MENU, null)
 const { canvasMenu } = useMenuModel()
 
-function contextLabel(entry: Exclude<MenuEntry, { separator: true }>): string {
-  const node = props.editor.getSelectedNode()
-  if (entry.id === 'selection.toggleVisibility') return (node?.visible ?? true) ? 'Hide' : 'Show'
-  if (entry.id === 'selection.toggleLock') return (node?.locked ?? false) ? 'Unlock' : 'Lock'
-  return entry.label
-}
-
-function toContextEntries(entries: readonly MenuEntry[]): ContextMenuEntry[] {
-  return entries.map((entry) =>
-    entry.separator
-      ? { separator: true }
-      : {
-          label: contextLabel(entry),
-          shortcut: entry.shortcut,
-          disabled: entry.disabled,
-          checked: entry.checked,
-          action: entry.action,
-          sub: entry.sub ? toContextEntries(entry.sub) : undefined,
-        },
-  )
-}
-
 function buildContextMenu(event: MouseEvent, cursorPos?: { x: number; y: number }) {
   if (!showContextMenu) return
   const hasSelection = props.editor.state.selectedIds.size > 0
@@ -90,7 +68,14 @@ function buildContextMenu(event: MouseEvent, cursorPos?: { x: number; y: number 
     },
     { separator: true },
   ]
-  showContextMenu([...clipboardGroup, ...toContextEntries(canvasMenu.value)], {
+  const entries = canvasMenu.value.map((entry) => {
+    if (entry.separator) return entry
+    const node = props.editor.getSelectedNode()
+    if (entry.id === 'selection.toggleVisibility') return { ...entry, label: (node?.visible ?? true) ? 'Hide' : 'Show' }
+    if (entry.id === 'selection.toggleLock') return { ...entry, label: (node?.locked ?? false) ? 'Unlock' : 'Lock' }
+    return entry
+  })
+  showContextMenu([...clipboardGroup, ...toContextEntries(entries)], {
     x: event.clientX,
     y: event.clientY,
   })

@@ -2,7 +2,7 @@
 // The right-hand Design panel, after OpenPencil's: page settings with nothing selected; position,
 // appearance, typography, fill and stroke for a selection. Edits go through @open-pencil/vue's
 // controls, so they are undoable and follow multi-selection ("Mixed") like the app's panel.
-import { computed, ref, watch } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import type { Fill, Stroke } from '@open-pencil/scene-graph'
 import type { Color } from '@open-pencil/scene-graph/primitives'
 import { PAGE_DEFAULT_BACKGROUNDS } from '@open-pencil/core/constants'
@@ -13,11 +13,15 @@ import { TypographyControlsRoot } from '@open-pencil/vue/primitives/TypographyCo
 import { useNodeProps } from '@open-pencil/vue/controls/node-props'
 import { useEditorPropertyList } from '@open-pencil/vue/controls/property-list'
 import { useFillControls } from '@open-pencil/vue/controls/fill'
+import { useSelectionColors } from '@open-pencil/vue/controls/selection-colors'
 import { useStrokeControls } from '@open-pencil/vue/controls/stroke'
+import { useEditorCommands } from '@open-pencil/vue/editor/commands'
+import { AUTO_ARRANGE_GROUPS, type MenuEntry } from '@open-pencil/vue/editor/menu-model'
 import { ColorField, NumField } from './fields'
 import AutoLayoutSection from './AutoLayoutSection.vue'
 import EffectsSection from './EffectsSection.vue'
 import ExportSection from './ExportSection.vue'
+import { SHOW_CONTEXT_MENU, toContextEntries } from './context'
 import { EYE_ICON, EYE_OFF_ICON, LAYER_ICONS } from './icons'
 
 const editor = useEditor()
@@ -26,9 +30,12 @@ const fills = useEditorPropertyList('fills')
 const strokes = useEditorPropertyList('strokes')
 const { defaultFill } = useFillControls()
 const strokeControls = useStrokeControls()
+const selectionColors = useSelectionColors()
+const { menuItem } = useEditorCommands()
+const showContextMenu = inject(SHOW_CONTEXT_MENU, null)
 
 const hasSelection = computed(() => nodes.value.length > 0)
-const isText = computed(() => nodes.value.length > 0 && nodes.value.every((n) => n.type === 'TEXT'))
+const isText = computed(() => nodes.value.length > 0 && nodes.value.some((n) => n.type === 'TEXT'))
 
 const TYPE_NAMES: Record<string, string> = {
   FRAME: 'Frame', GROUP: 'Group', SECTION: 'Section', COMPONENT: 'Component', COMPONENT_SET: 'Component set',
@@ -37,11 +44,51 @@ const TYPE_NAMES: Record<string, string> = {
   BOOLEAN_OPERATION: 'Boolean', IMAGE: 'Image',
 }
 const heading = computed(() => {
-  if (isMulti.value) return `${nodes.value.length} layers`
+  if (isMulti.value) return `${nodes.value.length} selected`
   const n = node.value
   return n ? (TYPE_NAMES[n.type] ?? n.type) : ''
 })
 const headingIcon = computed(() => (node.value && !isMulti.value ? LAYER_ICONS[node.value.type] : undefined))
+
+function openMenuAtButton(entries: MenuEntry[], event: MouseEvent) {
+  if (!showContextMenu) return
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  showContextMenu(toContextEntries(entries), { x: rect.left, y: rect.bottom })
+}
+
+function openBooleanMenu(event: MouseEvent) {
+  openMenuAtButton(
+    [
+      menuItem('selection.booleanUnion'),
+      menuItem('selection.booleanSubtract'),
+      menuItem('selection.booleanIntersect'),
+      menuItem('selection.booleanExclude'),
+      { separator: true },
+      menuItem('selection.flatten'),
+    ],
+    event,
+  )
+}
+
+function openArrangeMenu(event: MouseEvent) {
+  const autoArrangeSub: MenuEntry[] = AUTO_ARRANGE_GROUPS.flatMap((group, i) => [
+    ...(i > 0 ? [{ separator: true } as const] : []),
+    ...group.map((id) => menuItem(id)),
+  ])
+  openMenuAtButton(
+    [
+      menuItem('selection.tidyUp'),
+      menuItem('selection.distributeVertical'),
+      menuItem('selection.distributeHorizontal'),
+      { separator: true },
+      menuItem('selection.packHorizontal'),
+      menuItem('selection.packVertical'),
+      { separator: true },
+      { label: 'Auto arrange', sub: autoArrangeSub },
+    ],
+    event,
+  )
+}
 
 const num = (v: unknown): number | symbol => (typeof v === 'number' ? v : typeof v === 'symbol' ? v : 0)
 
@@ -145,11 +192,19 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
       <section class="op-prop op-prop-title">
         <svg v-if="headingIcon" class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" v-html="headingIcon" />
         <span>{{ heading }}</span>
+        <button class="op-icon-btn op-title-action" title="Boolean operations" @click="openBooleanMenu">
+          <svg class="op-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25">
+            <rect x="2.5" y="2.5" width="7" height="7" rx="1" /><rect x="6.5" y="6.5" width="7" height="7" rx="1" />
+          </svg>
+        </button>
       </section>
 
       <PositionControlsRoot v-slot="pos">
         <section class="op-prop">
-          <div class="op-prop-head">Position</div>
+          <div class="op-prop-head">
+            Position
+            <button v-if="isMulti" class="op-icon-btn" title="Arrange" @click="openArrangeMenu">⋯</button>
+          </div>
           <div class="op-align-row">
             <button v-for="a in (['min', 'center', 'max'] as const)" :key="'h' + a" class="op-icon-btn" :title="`Align ${a === 'min' ? 'left' : a === 'max' ? 'right' : 'horizontal centers'}`" @click="pos.actions.align('horizontal', a)">
               <svg class="op-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round">
@@ -168,11 +223,27 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
             </button>
           </div>
           <div class="op-grid2">
-            <NumField label="X" :value="pos.xValue" @commit="(v: number, p: number) => setProp(pos.actions, 'x', v, p)" />
-            <NumField label="Y" :value="pos.yValue" @commit="(v: number, p: number) => setProp(pos.actions, 'y', v, p)" />
+            <template v-if="!pos.inAutoLayout || pos.ignoresAutoLayout">
+              <NumField label="X" :value="pos.xValue" @commit="(v: number, p: number) => setProp(pos.actions, 'x', v, p)" />
+              <NumField label="Y" :value="pos.yValue" @commit="(v: number, p: number) => setProp(pos.actions, 'y', v, p)" />
+            </template>
             <NumField label="W" :value="pos.wValue" :min="0.01" @commit="(v: number, p: number) => setProp(pos.actions, 'width', v, p)" />
             <NumField label="H" :value="pos.hValue" :min="0.01" @commit="(v: number, p: number) => setProp(pos.actions, 'height', v, p)" />
             <NumField v-if="pos.rotates" label="↻" title="Rotation" suffix="°" :value="pos.rotationValue" @commit="(v: number, p: number) => setProp(pos.actions, 'rotation', v, p)" />
+          </div>
+          <div class="op-transform-row">
+            <button class="op-icon-btn" title="Flip horizontal (Shift+H)" @click="pos.actions.flip('horizontal')">⇄</button>
+            <button class="op-icon-btn" title="Flip vertical (Shift+V)" @click="pos.actions.flip('vertical')">⇅</button>
+            <button v-if="pos.rotates" class="op-icon-btn" title="Rotate 90°" @click="pos.actions.rotate(90)">↻90°</button>
+            <button
+              v-if="pos.inAutoLayout"
+              class="op-icon-btn op-ignore-layout"
+              :class="{ 'is-on': pos.ignoresAutoLayout }"
+              title="Ignore auto layout"
+              @click="pos.actions.toggleIgnoreAutoLayout()"
+            >
+              Ignore auto layout
+            </button>
           </div>
         </section>
       </PositionControlsRoot>
@@ -198,7 +269,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
             <input
               v-model="fontFamily"
               spellcheck="false"
-              placeholder="Font family"
+              :placeholder="typeof merged('fontFamily') === 'symbol' ? 'Mixed' : 'Font family'"
               @keydown.stop="(e: KeyboardEvent) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()"
               @change="type.actions.setFamily(fontFamily.trim())"
             />
@@ -305,6 +376,18 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
               @commit="(v: number) => updateAllWithUndo({ strokeWeight: v }, 'Change stroke weight')" />
           </div>
         </template>
+      </section>
+
+      <section v-if="selectionColors.shown.value && selectionColors.colors.value.length > 0" class="op-prop">
+        <div class="op-prop-head">Selection colors</div>
+        <div v-for="(item, i) in selectionColors.colors.value" :key="i" class="op-paint">
+          <ColorField
+            :color="item.color"
+            :opacity="item.opacity"
+            @color="(c: Color) => { selectionColors.begin(); selectionColors.replace(i, { color: c, opacity: item.opacity }); selectionColors.finish() }"
+            @opacity="(o: number) => { selectionColors.begin(); selectionColors.replace(i, { color: item.color, opacity: o }); selectionColors.finish() }"
+          />
+        </div>
       </section>
 
       <EffectsSection />

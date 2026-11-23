@@ -7,14 +7,17 @@ import type { LayoutMode, LayoutSizing } from '@open-pencil/scene-graph'
 import { useEditor } from '@open-pencil/vue'
 import { LayoutControlsRoot } from '@open-pencil/vue/primitives/LayoutControls'
 import { useNodeProps } from '@open-pencil/vue/controls/node-props'
+import { LAYOUT_CONTAINER_TYPES, useSelectionLayout, type TextResizeMode } from '@open-pencil/vue/controls/selection-layout'
 import { NumField } from './fields'
 
 const editor = useEditor()
 const { node, nodes, isMulti, updateAllWithUndo } = useNodeProps()
+const multi = useSelectionLayout()
 
 /** Layers that can hold an auto layout themselves; anything else gets wrapped in a new frame. */
 const CONTAINERS = new Set(['FRAME', 'COMPONENT', 'COMPONENT_SET', 'INSTANCE', 'SECTION'])
 const target = computed(() => (!isMulti.value ? node.value : null))
+const isContainer = computed(() => !!target.value && LAYOUT_CONTAINER_TYPES.has(target.value.type))
 const mode = computed<LayoutMode>(() => target.value?.layoutMode ?? 'NONE')
 const hasLayout = computed(() => mode.value !== 'NONE')
 const canAdd = computed(() => nodes.value.length > 0 && !hasLayout.value)
@@ -136,6 +139,45 @@ const SIZING_LABELS: Record<LayoutSizing, string> = { FIXED: 'Fixed', HUG: 'Hug'
       <div v-if="lay.isGrid" class="op-prop-note">Grid tracks: {{ target.gridTemplateColumns?.length ?? 0 }} columns × {{ target.gridTemplateRows?.length ?? 0 }} rows</div>
     </LayoutControlsRoot>
 
-    <div v-else-if="isMulti && !canAdd" class="op-prop-note">Select one layer to edit its auto layout.</div>
+    <template v-else-if="isMulti">
+      <div v-if="multi.layoutMode.value !== undefined" class="op-layout-row">
+        <div class="op-segmented op-layout-dir">
+          <button :class="{ 'is-active': multi.layoutMode.value === 'NONE' }" title="Freeform" @click="multi.setLayoutMode('NONE')">None</button>
+          <button :class="{ 'is-active': multi.layoutMode.value === 'VERTICAL' }" title="Vertical layout" @click="multi.setLayoutMode('VERTICAL')">↓</button>
+          <button :class="{ 'is-active': multi.layoutMode.value === 'HORIZONTAL' }" title="Horizontal layout" @click="multi.setLayoutMode('HORIZONTAL')">→</button>
+        </div>
+      </div>
+      <NumField
+        v-if="multi.spacingAxis.value"
+        :label="multi.spacingAxis.value === 'vertical' ? '↕' : '↔'"
+        title="Gap between items"
+        :min="0"
+        :value="multi.spacing.value"
+        @commit="(v: number) => { multi.setSpacing(v); multi.flushSpacing() }"
+      />
+      <div v-if="multi.textResize.value !== undefined" class="op-segmented">
+        <button :class="{ 'is-active': multi.textResize.value === 'AUTO_WIDTH' }" @click="multi.setTextResize('AUTO_WIDTH' as TextResizeMode)">Auto W</button>
+        <button :class="{ 'is-active': multi.textResize.value === 'AUTO_HEIGHT' }" @click="multi.setTextResize('AUTO_HEIGHT' as TextResizeMode)">Auto H</button>
+        <button :class="{ 'is-active': multi.textResize.value === 'FIXED' }" @click="multi.setTextResize('FIXED' as TextResizeMode)">Fixed</button>
+      </div>
+      <label v-if="multi.clipsContent.value !== undefined" class="op-checkbox">
+        <input
+          type="checkbox"
+          :checked="multi.clipsContent.value === true"
+          :indeterminate="typeof multi.clipsContent.value === 'symbol'"
+          @change="multi.toggleClipsContent()"
+        />
+        <span>Clip content</span>
+      </label>
+    </template>
+
+    <label v-if="!isMulti && isContainer && target" class="op-checkbox">
+      <input
+        type="checkbox"
+        :checked="target.clipsContent"
+        @change="updateAllWithUndo({ clipsContent: !target.clipsContent }, 'Toggle clip content')"
+      />
+      <span>Clip content</span>
+    </label>
   </section>
 </template>
