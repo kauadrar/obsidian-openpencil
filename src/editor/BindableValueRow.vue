@@ -21,6 +21,8 @@ const props = defineProps<{
 const provider = props.kind === 'color' ? useColorBindingProvider() : useNumberBindingProvider()
 const types = props.kind === 'color' ? ['COLOR'] : ['FLOAT']
 const targets = computed(() => (props.nodeId ? [{ nodeId: props.nodeId, path: props.path }] : []))
+/** Whether the field binds: one layer is selected, so there is a target to bind. */
+const bindable = computed(() => props.nodeId !== null)
 const createLabel = (value: unknown) => {
   if (props.kind === 'number' && typeof value === 'number') {
     return `Create number variable from ${Math.round(value * 100) / 100}`
@@ -33,11 +35,12 @@ const createLabel = (value: unknown) => {
 </script>
 
 <template>
-  <BindableValueRoot v-if="nodeId" :provider="provider as never" :targets="targets" :value="value as never" v-slot="s">
-    <!-- The popover is positioned against this anchor; without it reka parks the list off-screen. -->
+  <!-- One tree whether or not the row can bind: switching trees would remount the field it wraps (a fill's colour
+       picker, say, when its tab changes), and a remount closes the popover. Only the binding UI depends on a target. -->
+  <BindableValueRoot :provider="provider as never" :targets="targets" :value="value as never" v-slot="s">
     <BindableValuePicker>
-      <ComboboxAnchor as="div" class="op-bind" :data-state="s.state">
-        <div v-if="s.state === 'bound' && s.variable" class="op-bind-pill" :title="s.variable.name">
+      <ComboboxAnchor as="div" class="op-bind" :data-state="bindable ? s.state : undefined">
+        <div v-if="bindable && s.state === 'bound' && s.variable" class="op-bind-pill" :title="s.variable.name">
           <span class="op-bind-pill-name">{{ s.variable.name }}</span>
           <button
             type="button"
@@ -48,16 +51,17 @@ const createLabel = (value: unknown) => {
           >×</button>
         </div>
         <slot v-else />
-        <BindableValueTrigger class="op-bind-trigger" aria-label="Apply variable" title="Apply variable">◇</BindableValueTrigger>
-        <VariablePopover
-          :types="types"
-          :search="s.searchTerm"
-          :create-label="createLabel(value)"
-          @search="(term: string) => s.actions.setSearchTerm(term)"
-          @create="s.actions.create('')"
-        />
+        <template v-if="bindable">
+          <BindableValueTrigger class="op-bind-trigger" aria-label="Apply variable" title="Apply variable">◇</BindableValueTrigger>
+          <VariablePopover
+            :types="types"
+            :search="s.searchTerm"
+            :create-label="createLabel(value)"
+            @search="(term: string) => s.actions.setSearchTerm(term)"
+            @create="s.actions.create('')"
+          />
+        </template>
       </ComboboxAnchor>
     </BindableValuePicker>
   </BindableValueRoot>
-  <slot v-else />
 </template>
