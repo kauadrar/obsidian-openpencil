@@ -426,44 +426,50 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
           <div class="op-constraints-row">
             <div class="op-constraints-diagram" title="Click pin to set, Shift+click to add">
               <div class="op-constraints-inner">
-                <button
-                  type="button"
+                <div
+                  role="button"
+                  tabindex="0"
                   class="op-pin op-pin-h-center"
                   :class="{ 'is-active': con.horizontal === 'CENTER' }"
                   title="Horizontal center"
                   @click="con.actions.setCenter('horizontal')"
                 />
-                <button
-                  type="button"
+                <div
+                  role="button"
+                  tabindex="0"
                   class="op-pin op-pin-v-center"
                   :class="{ 'is-active': con.vertical === 'CENTER' }"
                   title="Vertical center"
                   @click="con.actions.setCenter('vertical')"
                 />
               </div>
-              <button
-                type="button"
+              <div
+                role="button"
+                tabindex="0"
                 class="op-pin op-pin-left"
                 :class="{ 'is-active': con.horizontal === 'MIN' || con.horizontal === 'STRETCH' }"
                 title="Left"
                 @click="(e: MouseEvent) => con.actions.togglePin('horizontal', 'leading', e.shiftKey)"
               />
-              <button
-                type="button"
+              <div
+                role="button"
+                tabindex="0"
                 class="op-pin op-pin-right"
                 :class="{ 'is-active': con.horizontal === 'MAX' || con.horizontal === 'STRETCH' }"
                 title="Right"
                 @click="(e: MouseEvent) => con.actions.togglePin('horizontal', 'trailing', e.shiftKey)"
               />
-              <button
-                type="button"
+              <div
+                role="button"
+                tabindex="0"
                 class="op-pin op-pin-top"
                 :class="{ 'is-active': con.vertical === 'MIN' || con.vertical === 'STRETCH' }"
                 title="Top"
                 @click="(e: MouseEvent) => con.actions.togglePin('vertical', 'leading', e.shiftKey)"
               />
-              <button
-                type="button"
+              <div
+                role="button"
+                tabindex="0"
                 class="op-pin op-pin-bottom"
                 :class="{ 'is-active': con.vertical === 'MAX' || con.vertical === 'STRETCH' }"
                 title="Bottom"
