@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import vm from 'node:vm'
+import zlib from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -130,4 +131,25 @@ test('mobile mode never writes to vault on save or markDirty', async () => {
     await view.save()
     assert.equal(modifyBinaryCalls, 0)
   }
+})
+
+test('dist/main.js embedded editor payload contains is-preview and op-preview-page', () => {
+  const code = fs.readFileSync(mainJsPath, 'utf8')
+  const match = code.match(/PAYLOAD\s*=\s*"([A-Za-z0-9+/=]+)"/)
+  assert.ok(match, 'dist/main.js must contain embedded gzipped PAYLOAD')
+  const raw = zlib.gunzipSync(Buffer.from(match[1], 'base64'))
+  const headerLength = raw.readUInt32LE(0)
+  const header = JSON.parse(raw.subarray(4, 4 + headerLength).toString('utf8'))
+  let offset = 4 + headerLength
+  let editorJs = null
+  for (const entry of header) {
+    if (entry.path === 'editor.js') {
+      editorJs = raw.subarray(offset, offset + entry.size).toString('utf8')
+      break
+    }
+    offset += entry.size
+  }
+  assert.ok(editorJs, 'editor.js must be present in embedded payload')
+  assert.ok(editorJs.includes('is-preview'), 'editor.js must contain is-preview')
+  assert.ok(editorJs.includes('op-preview-page'), 'editor.js must contain op-preview-page')
 })
