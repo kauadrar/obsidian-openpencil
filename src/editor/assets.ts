@@ -54,3 +54,43 @@ export function groupAssets(
   }
   return groups
 }
+
+/** Scale that fits a node's longer side to `maxSide` pixels. A zero-size node renders at 1x. */
+export function thumbnailScale(width: number, height: number, maxSide: number): number {
+  const longest = Math.max(width, height)
+  return longest > 0 ? maxSide / longest : 1
+}
+
+/**
+ * A string that changes whenever anything that affects how a component renders changes: its own
+ * size, paints and effects, visibility, and its whole subtree. A cached thumbnail is valid while this
+ * stays the same.
+ */
+export function subtreeSignature(
+  rootId: string,
+  lookup: (id: string) => RenderableNodeLike | undefined,
+): string {
+  const parts: string[] = []
+  const walk = (id: string) => {
+    const node = lookup(id)
+    if (!node) return
+    parts.push(
+      JSON.stringify([node.id, node.type, node.width, node.height, node.visible, node.fills, node.strokes, node.effects, node.cornerRadius, node.opacity]),
+    )
+    for (const child of node.childIds ?? []) walk(child)
+  }
+  walk(rootId)
+  return parts.join('|')
+}
+
+/** The node fields that decide how a component is drawn. */
+export interface RenderableNodeLike extends AssetNodeLike {
+  width?: number
+  height?: number
+  visible?: boolean
+  fills?: unknown
+  strokes?: unknown
+  effects?: unknown
+  cornerRadius?: number
+  opacity?: number
+}
