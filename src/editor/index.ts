@@ -198,6 +198,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
   const canWrite = opts.extension === 'fig' || penWritable
   const active = ref(true)
   const zoomSpeed = ref(opts.initialSettings?.zoomSpeed ?? 1)
+  const iconifyImport = ref(opts.initialSettings?.iconifyImport ?? true)
   if (opts.initialSettings) {
     editor.state.snappingPreferences.geometry = opts.initialSettings.snapToGeometry
     editor.state.snappingPreferences.objects = opts.initialSettings.snapToObjects
@@ -229,6 +230,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
           editor,
           active,
           zoomSpeed,
+          iconifyImport,
           readOnly: !canWrite,
           previewOnly: Boolean(opts.previewOnly),
           fileName: opts.fileName.replace(/\.[^.]+$/, ''),
@@ -257,6 +259,7 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
       editor.state.snappingPreferences.objects = next.snapToObjects
       editor.state.snappingPreferences.pixelGrid = next.snapToPixelGrid
       zoomSpeed.value = next.zoomSpeed
+      iconifyImport.value = next.iconifyImport
     },
     canWrite,
     async exportNative(documentName) {

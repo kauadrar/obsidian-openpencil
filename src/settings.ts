@@ -3,6 +3,8 @@ export interface OpenPencilSettings {
   snapToObjects: boolean
   snapToPixelGrid: boolean
   zoomSpeed: number
+  /** Whether the Insert icon popover searches and fetches icons from Iconify (needs internet access). */
+  iconifyImport: boolean
   mcpPort: number
   mcpToken: string
 }
@@ -14,6 +16,7 @@ export const DEFAULT_SETTINGS: OpenPencilSettings = {
   snapToObjects: true,
   snapToPixelGrid: true,
   zoomSpeed: 1,
+  iconifyImport: true,
   mcpPort: DEFAULT_MCP_PORT,
   mcpToken: '',
 }
@@ -34,6 +37,7 @@ export function sanitizeSettings(raw: unknown): OpenPencilSettings {
     snapToObjects: typeof obj.snapToObjects === 'boolean' ? obj.snapToObjects : DEFAULT_SETTINGS.snapToObjects,
     snapToPixelGrid: typeof obj.snapToPixelGrid === 'boolean' ? obj.snapToPixelGrid : DEFAULT_SETTINGS.snapToPixelGrid,
     zoomSpeed: zoom,
+    iconifyImport: typeof obj.iconifyImport === 'boolean' ? obj.iconifyImport : DEFAULT_SETTINGS.iconifyImport,
     mcpPort,
     mcpToken,
   }

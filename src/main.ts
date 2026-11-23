@@ -771,6 +771,15 @@ class OpenPencilSettingTab extends PluginSettingTab {
           }),
       )
 
+    new Setting(containerEl)
+      .setName('Iconify import')
+      .setDesc('Search and insert icons from Iconify. Needs an internet connection; offline, the icon search shows nothing.')
+      .addToggle((toggle) =>
+        toggle.setValue(this.plugin.settings.iconifyImport).onChange((value) => {
+          void this.plugin.updateSettings({ iconifyImport: value })
+        }),
+      )
+
     containerEl.createEl('h3', { text: 'MCP Server' })
 
     if (!Platform.isDesktopApp) {

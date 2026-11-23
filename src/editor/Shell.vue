@@ -40,6 +40,7 @@ const props = defineProps<{
   editor: Editor
   active: Ref<boolean>
   zoomSpeed: Ref<number>
+  iconifyImport: Ref<boolean>
   readOnly: boolean
   previewOnly?: boolean
   fileName: string
