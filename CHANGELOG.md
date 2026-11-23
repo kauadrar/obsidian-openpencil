@@ -1,0 +1,57 @@
+# Changelog
+
+## [0.2.0](https://github.com/kauadrar/obsidian-openpencil/compare/0.1.0...0.2.0) (2026-11-23)
+
+
+### Features
+
+* add a Design panel on the right of the editor ([31f6e27](https://github.com/kauadrar/obsidian-openpencil/commit/31f6e27417a4d8afd3af70e56b6864ccea421b2c))
+* add an Auto layout section to the Design panel ([0ff4d14](https://github.com/kauadrar/obsidian-openpencil/commit/0ff4d142358cd09f55e915e4e4a45734c142cbd9))
+* add an Effects section to the Design panel ([2a58cd1](https://github.com/kauadrar/obsidian-openpencil/commit/2a58cd114f201efeeff2d56502a821e397384dba))
+* add an Export section to the Design panel ([665207b](https://github.com/kauadrar/obsidian-openpencil/commit/665207b447340cd100b83049fa836c49f2bf3cc6))
+* **appearance:** add 19-mode blend dropdown and independent corner radii ([7ef5723](https://github.com/kauadrar/obsidian-openpencil/commit/7ef5723f9c8f6b8cafebc7315c56b7cbc2187fbf))
+* **color-picker:** add 240px popover with SV, sliders, eyedropper, and RGB/HSL/HSB/OkHCL ([a5b97a5](https://github.com/kauadrar/obsidian-openpencil/commit/a5b97a5f85ca3b28efe17ecdeb767e4a39765885))
+* **commands:** register editor and app commands in Obsidian command palette ([6fbff7c](https://github.com/kauadrar/obsidian-openpencil/commit/6fbff7caf194e62637bd8214e7e80c2e6a5056a3))
+* **constraints:** add constraints pin diagram and axis selects ([8464a58](https://github.com/kauadrar/obsidian-openpencil/commit/8464a589dd05495d3e45e10b4ea8c2f0ff9b6c7a))
+* **constraints:** apply child constraints on panel W/H edits ([975fb5c](https://github.com/kauadrar/obsidian-openpencil/commit/975fb5cffb8a06a300a80e6270285c8b2dc055b0))
+* **editor:** add canvas and layer context menu ([cba6b3f](https://github.com/kauadrar/obsidian-openpencil/commit/cba6b3f7a6eaf09724f1a3c41133df8f6d06819f))
+* **editor:** add canvas file drop and Place… command ([7725b3f](https://github.com/kauadrar/obsidian-openpencil/commit/7725b3f97c10339e0644bea9d87f1ca7ce296313))
+* **editor:** add Copy as SVG and Copy as PNG to context menu ([b434d98](https://github.com/kauadrar/obsidian-openpencil/commit/b434d985b9bf52bc23da92469553d9816241fc7e))
+* **editor:** add missing canvas keyboard shortcuts ([006e6f8](https://github.com/kauadrar/obsidian-openpencil/commit/006e6f8cce62c2e9d996ca3aa5f94998c700a23c))
+* **editor:** add page rename, delete, reorder, and dividers ([1f90690](https://github.com/kauadrar/obsidian-openpencil/commit/1f90690bb9a4ee48fa433507d8fb23f2b8c3814c))
+* **editor:** add zoom menu popover with presets, input, and view toggles ([d594c8c](https://github.com/kauadrar/obsidian-openpencil/commit/d594c8ce51f7432b1247706e742872e8d6325331))
+* **embeds:** render .fig thumbnails in reading view and live preview ([c36100f](https://github.com/kauadrar/obsidian-openpencil/commit/c36100fe1278381b9d9e84290aeea15035125f1b))
+* **explorer:** add New design to folder context menu ([13e828d](https://github.com/kauadrar/obsidian-openpencil/commit/13e828d17b779f4e8eca58749b9f5aff3d6a72ba))
+* **export:** write stable vault filenames and overwrite on re-export ([f260250](https://github.com/kauadrar/obsidian-openpencil/commit/f260250de712ed999a4d70214e93b76ffae22d85))
+* **fills:** add Solid, Gradient, and Image fill tabs with canvas handles and adjustments ([214c445](https://github.com/kauadrar/obsidian-openpencil/commit/214c44524e171c1901753df7580e05055cc163c0))
+* follow OpenPencil's own write support instead of hardcoding .pen as read-only ([6fa2f5b](https://github.com/kauadrar/obsidian-openpencil/commit/6fa2f5b6922646d81e5e44de7a0897b4a83859fb))
+* give the editor shell OpenPencil's layout and look ([0b0cc79](https://github.com/kauadrar/obsidian-openpencil/commit/0b0cc79674066f14d69637526e864e18a087d66c))
+* **header,mask:** add editable layer name, type switcher, component/mask actions, and mask section ([0dd9887](https://github.com/kauadrar/obsidian-openpencil/commit/0dd98874f459e7bb1b1306d3151f29e842f1ed89))
+* hide the Comment tool from the toolbar ([0bf3ffd](https://github.com/kauadrar/obsidian-openpencil/commit/0bf3ffda90f50f029f5532d2ed6921474cdfb315))
+* **layout:** add dimensions, min/max, aspect lock, text resizing, and auto-layout extras ([33cac0f](https://github.com/kauadrar/obsidian-openpencil/commit/33cac0fa222092d2992ad65054d450eeb2413477))
+* **panel:** add flips, clip content, booleans, arrange menu, and multi-selection ([f738215](https://github.com/kauadrar/obsidian-openpencil/commit/f738215586f3a047be74ed9becb60ea0bc742cb0))
+* **settings:** add PluginSettingTab for snapping and zoom speed ([ab072be](https://github.com/kauadrar/obsidian-openpencil/commit/ab072beb8abd34fcd3f96ba4a3d2dab9faf74a4a))
+* **stroke:** support non-solid paints, stroke settings popover, and per-side weights ([b8f4799](https://github.com/kauadrar/obsidian-openpencil/commit/b8f4799e759b55340b2a8828a1f2668d9da292f4))
+* **typography:** add searchable font picker, vertical align, B/I/U/S, and text case ([39233d9](https://github.com/kauadrar/obsidian-openpencil/commit/39233d9f7a0338d0d26219b06a76220d3c5b667a))
+
+
+### Bug Fixes
+
+* **color-picker:** bind OkHCL Chroma and Lightness gradient styles directly ([f14c41a](https://github.com/kauadrar/obsidian-openpencil/commit/f14c41a471932b41d5f42956821ee33ed4213810))
+* **color-picker:** fix SV/hue/alpha updates, gradients, Esc eyedropper, OkHCL sync, and layout ([2d1ab3d](https://github.com/kauadrar/obsidian-openpencil/commit/2d1ab3d83bc0e5e46e62adf9703a204f989feba6))
+* **constraints:** enlarge pin hit areas for reliable clicking ([ebca1a3](https://github.com/kauadrar/obsidian-openpencil/commit/ebca1a382097a1eee882e7996a2b76eaae3f9113))
+* **constraints:** reset obsidian button min-size and z-index on pins ([8973631](https://github.com/kauadrar/obsidian-openpencil/commit/8973631e43abf70e20507925345703907f575051))
+* **constraints:** use div role=button for pins to avoid obsidian button styles ([da8ef49](https://github.com/kauadrar/obsidian-openpencil/commit/da8ef498dd1b471727025329ac0a18b3db264b60))
+* disable the Comment tool and its C key, not only its toolbar button ([ee082d9](https://github.com/kauadrar/obsidian-openpencil/commit/ee082d9bcd45ad4b1843a1c2209e53371aae80a7))
+* **editor:** fix Cut execution, live Hide/Lock labels, and menu shortcut spacing ([7434280](https://github.com/kauadrar/obsidian-openpencil/commit/74342804a17a987065c776ffdf717b420dcf7713))
+* **editor:** use selectionLabelMenu for Hide/Show and Lock/Unlock labels ([2f3cd83](https://github.com/kauadrar/obsidian-openpencil/commit/2f3cd8306846275a5d1f5e0a0666074578b33d6c))
+* **embeds:** replace async Obsidian file-embed cards in Reading View and Live Preview ([361f979](https://github.com/kauadrar/obsidian-openpencil/commit/361f979675bba91ef30bdaee5d61962a2b820aad))
+* **fills:** keep popover open on gradient handle drag and fix stop position/opacity scale ([09028d6](https://github.com/kauadrar/obsidian-openpencil/commit/09028d67d65bff9c72cf25b8aa9f397dfd285e9d))
+* **fills:** unwrap PointerDownOutsideEvent in keepOpen for gradient handles ([aa620c2](https://github.com/kauadrar/obsidian-openpencil/commit/aa620c28a37d3a257bed8f8801ee08b7ba28ddb6))
+* keep the toolbar inside narrow canvases and the panel header above host overlays ([d083eed](https://github.com/kauadrar/obsidian-openpencil/commit/d083eed6b97024c71f8519412a745aec1cb2a03f))
+* keep the zoom pill clear of the vertical ruler ([273ec0a](https://github.com/kauadrar/obsidian-openpencil/commit/273ec0aa1f15fea3d195eec39e7f39fed2a1d5e9))
+* let ruler guides be dragged out of the rulers ([09b7ba3](https://github.com/kauadrar/obsidian-openpencil/commit/09b7ba331c9602ce08591074bb5679cbde3252b6))
+* move the zoom percentage to the canvas bottom-left, away from other plugins' status overlays ([5899574](https://github.com/kauadrar/obsidian-openpencil/commit/58995747993ddac6b684cf75607c65abb508741b))
+* save .fig files inside Obsidian, and stop squashing the page color field ([ed351a2](https://github.com/kauadrar/obsidian-openpencil/commit/ed351a2d317c4dca3c2842f87265b5e8c063d5ae))
+* **stroke:** treat Dash 0 as solid stroke ([c9626d9](https://github.com/kauadrar/obsidian-openpencil/commit/c9626d9075169a5d4995c18d1dd5111f9486679c))
+* **typography:** only list bundled Inter when local fonts are not loaded ([bcfc32e](https://github.com/kauadrar/obsidian-openpencil/commit/bcfc32e5d38bea300bf0d4fe9909e1363f914794))
