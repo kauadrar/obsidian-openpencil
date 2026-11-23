@@ -93,6 +93,8 @@ const { commands: editorCommands, runCommand: runSdkCommand } = useEditorCommand
 const typography = useTypography()
 
 function buildContextMenu(event: MouseEvent, cursorPos?: { x: number; y: number }) {
+  // Mobile is read-only (spec 25): no menu offers an edit action, so none is shown.
+  if (props.previewOnly) return
   if (!showContextMenu) return
   const hasSelection = props.editor.state.selectedIds.size > 0
   const clipboardGroup: ContextMenuEntry[] = [
@@ -398,6 +400,7 @@ const layerRename = useInlineRename((nodeId, name) => {
 })
 
 function canRunCommand(id: string): boolean {
+  if (props.previewOnly) return false
   if (id in editorCommands) return editorCommands[id as EditorCommandId].enabled.value
   const hasSelection = props.editor.state.selectedIds.size > 0
   switch (id) {
@@ -423,6 +426,7 @@ function canRunCommand(id: string): boolean {
 }
 
 function runCommand(id: string): void {
+  if (props.previewOnly) return
   if (id in editorCommands) {
     runSdkCommand(id as EditorCommandId)
     return
@@ -474,6 +478,7 @@ function runCommand(id: string): void {
 }
 
 async function onCanvasDrop(event: DragEvent) {
+  if (props.previewOnly) return
   const el = event.currentTarget as HTMLElement | null
   const rect = el?.getBoundingClientRect()
   if (!rect) return
@@ -494,6 +499,7 @@ async function onCanvasDrop(event: DragEvent) {
 }
 
 function placeFiles(files: File[], cx?: number, cy?: number): Promise<boolean> {
+  if (props.previewOnly) return Promise.resolve(false)
   if (cx !== undefined && cy !== undefined) return placeDroppedFiles(props.editor, files, cx, cy, notify)
   const vp = props.editor.getViewportSize()
   const center = props.editor.screenToCanvas(vp.width / 2, vp.height / 2)

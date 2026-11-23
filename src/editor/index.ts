@@ -5,6 +5,7 @@
 // files under dist/editor/assets, resolved against this module's URL.
 import '@open-pencil/core/runtime-assets/install'
 
+import { MOBILE_RESTRICTIONS } from './mobile-policy'
 import { createApp, defineComponent, h, provide, reactive, ref, type App as VueApp } from 'vue'
 import {
   NOTIFY,
@@ -186,6 +187,11 @@ export async function mountEditor(el: HTMLElement, opts: MountOptions): Promise<
   // A design file offers no board tools (sticky, shape, connector) and no Comment (out of scope):
   // restricting the tool state also drops their keys, not just their toolbar buttons.
   editor.setHostRestrictions({ tools: new Set(DESIGN_TOOLS) })
+  // On mobile the document is read-only: the core refuses every edit, from menus, shortcuts and API calls alike.
+  if (opts.previewOnly) {
+    editor.setHostRestrictions(MOBILE_RESTRICTIONS)
+    editor.setReadOnly(true)
+  }
 
   const applyTheme = (t: Theme) => {
     editor.state.theme = t
