@@ -15,6 +15,8 @@ import { useEditorPropertyList } from '@open-pencil/vue/controls/property-list'
 import { useFillControls } from '@open-pencil/vue/controls/fill'
 import { useSelectionColors } from '@open-pencil/vue/controls/selection-colors'
 import { useStrokeControls } from '@open-pencil/vue/controls/stroke'
+import { useOkHCL } from '@open-pencil/vue/controls/okhcl'
+import type { OkHCLControls } from '@open-pencil/vue/controls/color-model'
 import { useEditorCommands } from '@open-pencil/vue/editor/commands'
 import { AUTO_ARRANGE_GROUPS, type MenuEntry } from '@open-pencil/vue/editor/menu-model'
 import { ColorField, NumField } from './fields'
@@ -31,6 +33,7 @@ const strokes = useEditorPropertyList('strokes')
 const { defaultFill } = useFillControls()
 const strokeControls = useStrokeControls()
 const selectionColors = useSelectionColors()
+const okhcl = useOkHCL()
 const { menuItem } = useEditorCommands()
 const showContextMenu = inject(SHOW_CONTEXT_MENU, null)
 
@@ -140,6 +143,34 @@ const strokeAlign = computed(() => strokeControls.currentAlign())
 // ---- Fill/stroke rows
 const addFill = () => fills.actions.add(structuredClone(defaultFill) as Fill)
 const addStroke = () => strokes.actions.add(structuredClone(strokeControls.defaultStroke) as Stroke)
+function fillOkHCL(i: number): OkHCLControls | null {
+  const n = node.value
+  if (!n || isMulti.value) return null
+  const info = okhcl.getFillPreviewInfo(n, i)
+  return {
+    fieldFormat: okhcl.getFieldFormat(n, i, 'fill'),
+    fieldOptions: okhcl.fieldOptions,
+    okhcl: okhcl.getFillOkHCLColor(n, i),
+    previewColorSpace: info.previewColorSpace,
+    clipped: info.clipped,
+    setFieldFormat: (fmt) => okhcl.setFillFieldFormat(n, i, fmt),
+    updateOkHCL: (patch) => okhcl.updateFillOkHCL(n, i, patch),
+  }
+}
+function strokeOkHCL(i: number): OkHCLControls | null {
+  const n = node.value
+  if (!n || isMulti.value) return null
+  const info = okhcl.getStrokePreviewInfo(n, i)
+  return {
+    fieldFormat: okhcl.getFieldFormat(n, i, 'stroke'),
+    fieldOptions: okhcl.fieldOptions,
+    okhcl: okhcl.getStrokeOkHCLColor(n, i),
+    previewColorSpace: info.previewColorSpace,
+    clipped: info.clipped,
+    setFieldFormat: (fmt) => okhcl.setStrokeFieldFormat(n, i, fmt),
+    updateOkHCL: (patch) => okhcl.updateStrokeOkHCL(n, i, patch),
+  }
+}
 function fillLabel(f: Fill) {
   if (f.type === 'SOLID') return null
   if (f.type.startsWith('GRADIENT')) return f.type.replace('GRADIENT_', '').toLowerCase() + ' gradient'
@@ -326,6 +357,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
             v-if="fill.type === 'SOLID'"
             :color="fill.color"
             :opacity="fill.opacity"
+            :okhcl="fillOkHCL(i)"
             @color="(c: Color) => fills.actions.patch(i, { color: c })"
             @opacity="(o: number) => fills.actions.patch(i, { opacity: o })"
           />
@@ -352,6 +384,7 @@ const lengthUnit = (v: unknown): 'PIXELS' | 'PERCENT' =>
             <ColorField
               :color="stroke.color"
               :opacity="stroke.opacity"
+              :okhcl="strokeOkHCL(i)"
               @color="(c: Color) => strokes.actions.patch(i, { color: c })"
               @opacity="(o: number) => strokes.actions.patch(i, { opacity: o })"
             />
