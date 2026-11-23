@@ -22,6 +22,7 @@ import { createDesignEmbedExtension, DesignEmbedManager, processDesignEmbeds } f
 import { DEFAULT_SETTINGS, sanitizeSettings, type OpenPencilSettings } from './settings'
 import { ensureEditorUnpacked } from './unpack'
 import { EditorLoadError, editorFailureText } from './editor-failure'
+import { isBlockedOnMobile } from './editor/mobile-policy'
 import { loadEditorBlobs, type LoadedEditor } from './android/blob-loader'
 import { readEditorFiles } from './android/editor-files'
 import { withTimeout } from './timeout'
@@ -58,10 +59,11 @@ export default class OpenPencilPlugin extends Plugin {
     this.registerView(VIEW_TYPE, (leaf) => new DesignView(leaf, this))
     this.registerExtensions([...EXTENSIONS], VIEW_TYPE)
 
-    this.addRibbonIcon('pen-tool', 'New OpenPencil design', () => this.createDesign())
+    // Mobile is read-only (spec 25), so creating a design is not offered there.
+    if (!Platform.isMobile) this.addRibbonIcon('pen-tool', 'New OpenPencil design', () => this.createDesign())
     this.registerEvent(
       this.app.workspace.on('file-menu', (menu, file) => {
-        if (!(file instanceof TFolder)) return
+        if (!(file instanceof TFolder) || Platform.isMobile) return
         menu.addItem((item) =>
           item
             .setTitle('New design')
@@ -73,7 +75,11 @@ export default class OpenPencilPlugin extends Plugin {
     this.addCommand({
       id: 'new-design',
       name: 'New design',
-      callback: () => this.createDesign(),
+      checkCallback: (checking) => {
+        if (Platform.isMobile && isBlockedOnMobile('new-design')) return false
+        if (!checking) void this.createDesign()
+        return true
+      },
     })
     this.addCommand({
       id: 'save-as-fig',
@@ -90,6 +96,8 @@ export default class OpenPencilPlugin extends Plugin {
         id: cmd.id,
         name: cmd.name,
         checkCallback: (checking) => {
+          // Mobile is read-only: every command but saving is blocked there (spec 25).
+          if (Platform.isMobile && isBlockedOnMobile(cmd.id)) return false
           const view = this.app.workspace.getActiveViewOfType(DesignView)
           if (!view?.isFigActive()) return false
           if (cmd.id === 'app.place') {
