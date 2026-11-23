@@ -56,6 +56,20 @@ try {
       fig.names.includes('Smoke rect') && fig.names.includes('Smoke ellipse'))
     // The SDK only lets you drag guides out of the rulers when this flag is set.
     check('rulers accept guides', await page.evaluate(() => window.smokeEditor.state.showRulers === true))
+    // The zoom label sits at the canvas bottom-left, not in the Design panel's tab row, and keeps one width.
+    const label = async (zoom) => page.evaluate(async (zoom) => {
+      window.smokeEditor.state.zoom = zoom
+      await new Promise((r) => setTimeout(r, 50))
+      const z = document.querySelector('.op-canvas .op-zoom')
+      const c = document.querySelector('.op-canvas').getBoundingClientRect()
+      const r = z.getBoundingClientRect()
+      return { text: z.textContent, w: Math.round(r.width * 10), left: r.left - c.left, bottomGap: c.bottom - r.bottom,
+        clipped: z.scrollWidth > z.clientWidth, inTabRow: !!document.querySelector('.op-design-tabs .op-zoom, .op-design-zoom') }
+    }, zoom)
+    const lo = await label(0.02)
+    const hi = await label(10)
+    check('zoom label is at the canvas bottom-left, not in the tab row', lo.left < 80 && lo.bottomGap > 0 && !lo.inTabRow, JSON.stringify(lo))
+    check('zoom label keeps its width from 2% to 1000%, unclipped', lo.w === hi.w && !lo.clipped && !hi.clipped && hi.text === '1000%')
     // Design files have no Comment tool: neither the key nor the tool state may arm it.
     const tool = await page.evaluate(() => {
       const ed = window.smokeEditor
