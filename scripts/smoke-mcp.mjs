@@ -100,4 +100,22 @@ if (failures > 0) {
   console.error(`\n${failures} step(s) failed`)
   process.exit(1)
 }
+
+// Verify undo/redo actually mutates the page tree
+try {
+  const beforeUndo = await rpc('tools/call', { name: 'get_page_tree', arguments: {} })
+  const undoRes = await rpc('tools/call', { name: 'undo', arguments: {} })
+  const afterUndo = await rpc('tools/call', { name: 'get_page_tree', arguments: {} })
+  assert.notEqual(
+    afterUndo.result?.content?.[0]?.text,
+    beforeUndo.result?.content?.[0]?.text,
+    'undo did not revert page tree',
+  )
+  assert.ok(!undoRes.result?.isError, 'undo returned error')
+  console.log('PASS undo-reverts-edit')
+} catch (err) {
+  console.error(`FAIL undo-reverts-edit: ${err instanceof Error ? err.message : String(err)}`)
+  process.exit(1)
+}
+
 console.log('\nAll MCP smoke steps passed')

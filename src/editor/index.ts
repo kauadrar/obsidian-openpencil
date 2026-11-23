@@ -353,7 +353,41 @@ export async function executeEditorTool(
   if (!tool) throw new Error(`Unknown MCP tool: ${command}`)
   const figma = new FigmaAPI(editor.graph)
   await tool.loadFonts(figma, args)
-  return { output: await tool.execute(figma, args), mutates: tool.mutates }
+
+  if (!tool.mutates) {
+    return { output: await tool.execute(figma, args), mutates: false }
+  }
+
+  const pageId = editor.state.currentPageId
+  const beforeBytes = await exportFigFile(editor.graph, { documentName: 'undo-snapshot' })
+  const output = await tool.execute(figma, args)
+  const afterBytes = await exportFigFile(editor.graph, { documentName: 'redo-snapshot' })
+
+  const restoreBytes = async (bytes: Uint8Array) => {
+    const restored = await parseFigFile(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer)
+    const targetPage = editor.graph.getNode(pageId)
+    const sourcePage = restored.getNode(pageId) ?? restored.getPages()[0]
+    if (targetPage && sourcePage) {
+      for (const childId of [...targetPage.childIds]) {
+        editor.graph.deleteNode(childId)
+      }
+      for (const childId of sourcePage.childIds) {
+        const node = restored.getNode(childId)
+        if (node) {
+          editor.graph.createNode(node.type, pageId, node)
+        }
+      }
+    }
+    editor.requestRender()
+  }
+
+  editor.undo.push({
+    label: `MCP: ${tool.name}`,
+    inverse: () => void restoreBytes(beforeBytes),
+    forward: () => void restoreBytes(afterBytes),
+  })
+
+  return { output, mutates: true }
 }
 
 export async function executeHeadlessTool(
@@ -372,10 +406,16 @@ export async function executeHeadlessTool(
     graph = (await penFormat.readDocument({ data })).graph
   }
   const figma = new FigmaAPI(graph)
+  const currentPage = graph.getPages()[0]
+  const beforeCount = currentPage ? currentPage.childIds.length : 0
   await tool.loadFonts(figma, args)
   const output = await tool.execute(figma, args)
   if (!tool.mutates) {
     return { output }
+  }
+  const afterCount = currentPage ? currentPage.childIds.length : 0
+  if (beforeCount > 0 && afterCount === 0 && !tool.name.includes('delete')) {
+    throw new Error(`Refusing to overwrite non-empty page with empty page from ${tool.name}`)
   }
   if (extension === 'fig') {
     return { output, updatedBytes: await exportFigFile(graph, { documentName: 'design' }) }

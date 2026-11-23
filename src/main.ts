@@ -212,17 +212,22 @@ export default class OpenPencilPlugin extends Plugin {
         if (!(file instanceof TFile)) {
           throw new Error(`Design file not found: ${normalized}`)
         }
-        const leaf = this.app.workspace.getLeaf(false)
+        const leaf = this.app.workspace.getLeaf('tab')
         await leaf.openFile(file)
         return { path: file.path, name: file.name, open: true, active: true, dirty: false }
       },
       closeDocument: async (path: string): Promise<void> => {
         const normalized = normalizePath(path)
+        let closed = false
         for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
           const view = leaf.view
           if (view instanceof DesignView && view.file?.path === normalized) {
             leaf.detach()
+            closed = true
           }
+        }
+        if (!closed) {
+          throw new Error(`Document is not open: ${normalized}`)
         }
       },
       activateDocument: async (path: string): Promise<void> => {
@@ -244,7 +249,7 @@ export default class OpenPencilPlugin extends Plugin {
         const mod = await this.loadEditor()
         const bytes = await mod.createEmptyDesignBytes(normalized.endsWith('.pen') ? 'pen' : 'fig')
         const file = await this.app.vault.createBinary(normalized, bytes.buffer as ArrayBuffer)
-        const leaf = this.app.workspace.getLeaf(false)
+        const leaf = this.app.workspace.getLeaf('tab')
         await leaf.openFile(file)
         return { path: file.path, name: file.name, open: true, active: true, dirty: false }
       },
@@ -262,7 +267,11 @@ export default class OpenPencilPlugin extends Plugin {
       listRecentDocuments: (): string[] => {
         return this.app.workspace
           .getLastOpenFiles()
-          .filter((p) => p.toLowerCase().endsWith('.fig') || p.toLowerCase().endsWith('.pen'))
+          .filter(
+            (p) =>
+              (p.toLowerCase().endsWith('.fig') || p.toLowerCase().endsWith('.pen')) &&
+              this.app.vault.getAbstractFileByPath(p) instanceof TFile,
+          )
       },
       undo: async (path?: string): Promise<boolean> => {
         const view = path ? findOpenView(path) : this.app.workspace.getActiveViewOfType(DesignView)
@@ -317,6 +326,9 @@ export default class OpenPencilPlugin extends Plugin {
         const ext = file.extension.toLowerCase() === 'pen' ? 'pen' : 'fig'
         const result = await mod.executeHeadlessTool(raw, ext, command, args)
         if (result.updatedBytes) {
+          if (findOpenView(normalized)) {
+            throw new Error(`Refusing headless write: ${normalized} is open in an Editor tab`)
+          }
           await this.app.vault.modifyBinary(file, result.updatedBytes.buffer as ArrayBuffer)
         }
         return result.output
@@ -734,6 +746,7 @@ class OpenPencilSettingTab extends PluginSettingTab {
         {
           mcpServers: {
             'openpencil-obsidian': {
+              type: 'http',
               url: `http://127.0.0.1:${this.plugin.settings.mcpPort}/mcp`,
               headers: {
                 Authorization: `Bearer ${this.plugin.settings.mcpToken}`,
