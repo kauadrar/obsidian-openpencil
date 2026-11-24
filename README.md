@@ -40,7 +40,8 @@ design editor, inside an Obsidian tab, the way the Excalidraw plugin handles `.e
 
 ## Known limitations
 
-- **Android:** the editor is read-only. Designs open as a preview: you can look at them, pan and zoom, but not edit, copy, duplicate, delete or reorder layers, and creating a new design is not offered. Saving as .fig still works. Desktop and iOS keep full editing. If the editor cannot load on a device, the plugin shows a notice with the error.
+- **Android and iOS:** the editor is read-only. Designs open as a preview: you can look at them, pan and zoom, but not edit, copy, duplicate, delete or reorder layers, and creating a new design is not offered. If the editor cannot load on a device, the plugin shows a notice with the error.
+- **Desktop** keeps full editing.
 - **Iconify icons** need an internet connection; offline, the Insert icon search shows a note instead of results.
 
 ## Install
