@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.4.1](https://github.com/kauadrar/obsidian-openpencil/compare/0.4.0...0.4.1) (2026-11-24)
+
+
+### Features
+
+* **android:** load editor chunks as blob URLs in dependency order ([5482a46](https://github.com/kauadrar/obsidian-openpencil/commit/5482a464f8cb66e37984ba87340f80ca8e99bdbe))
+* **android:** load the editor through blob URLs on Android ([4fe0bae](https://github.com/kauadrar/obsidian-openpencil/commit/4fe0bae21b071f24a2de888cbc52f22f9970f7b6))
+
+
+### Bug Fixes
+
+* **android:** report an Android editor load failure with its detail ([89bac62](https://github.com/kauadrar/obsidian-openpencil/commit/89bac62763589e8940f07358ca5b4a3734c63a9f))
+* **android:** stop the blank editor view by running the editor without workers ([3c1b1bd](https://github.com/kauadrar/obsidian-openpencil/commit/3c1b1bd302e43824bc2383862e023a382a83cc69))
+* **mobile:** block new design, place and the other edit commands ([c9229a2](https://github.com/kauadrar/obsidian-openpencil/commit/c9229a26c59a5265da36e9dff959513d9e851c2d))
+* **mobile:** block save as .fig on mobile ([04365c4](https://github.com/kauadrar/obsidian-openpencil/commit/04365c4a7cfc831d7e0c13fdec22f02e98d54d4f))
+* **mobile:** make the mobile editor read-only so no edit action can run ([751a66a](https://github.com/kauadrar/obsidian-openpencil/commit/751a66a439085edd1f6e71bb5618110252dc86bc))
+
+
+### Chores
+
+* release 0.4.1 ([b8a81bb](https://github.com/kauadrar/obsidian-openpencil/commit/b8a81bb9e87c0d64ec03c5420604fff7d7b15c30))
+
 ## 0.4.0 highlights
 
 * **Android: the editor doesn't open designs yet.** Android's WebView blocks the editor's files, so the plugin now shows a clear notice instead of failing silently. Desktop and iOS work. A fix is planned for a later release.
