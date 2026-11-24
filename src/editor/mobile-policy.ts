@@ -13,10 +13,10 @@ export const MOBILE_RESTRICTIONS = {
   pathEdits: 'handles',
 } as const
 
-/** The plugin's commands that stay available on mobile: saving, which writes the file as it is, and nothing else. */
-export const MOBILE_ALLOWED_COMMANDS: ReadonlySet<string> = new Set(['save-as-fig'])
+/** The plugin's commands that stay available on mobile: none. Mobile never writes files (spec 25), so saving is blocked too. */
+export const MOBILE_ALLOWED_COMMANDS: ReadonlySet<string> = new Set<string>()
 
-/** Whether a plugin command is blocked on mobile: every command but the allowed ones, creating and editing included. */
+/** Whether a plugin command is blocked on mobile: every command, since mobile is read-only and writes no files. */
 export function isBlockedOnMobile(commandId: string): boolean {
   return !MOBILE_ALLOWED_COMMANDS.has(commandId)
 }

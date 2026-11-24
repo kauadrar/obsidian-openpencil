@@ -85,6 +85,7 @@ export default class OpenPencilPlugin extends Plugin {
       id: 'save-as-fig',
       name: 'Save as .fig',
       checkCallback: (checking) => {
+        if (Platform.isMobile && isBlockedOnMobile('save-as-fig')) return false
         const view = this.app.workspace.getActiveViewOfType(DesignView)
         if (!view?.file) return false
         if (!checking) void view.saveAsFig()

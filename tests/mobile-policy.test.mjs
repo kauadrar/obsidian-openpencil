@@ -19,6 +19,6 @@ test('mobile blocks creating and editing commands, including new design and plac
   }
 })
 
-test('mobile keeps saving as .fig', () => {
-  assert.equal(isBlockedOnMobile('save-as-fig'), false)
+test('mobile blocks save as .fig, since mobile never writes files', () => {
+  assert.equal(isBlockedOnMobile('save-as-fig'), true)
 })
